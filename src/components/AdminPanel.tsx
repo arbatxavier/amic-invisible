@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { makeT, type Locale } from '@/lib/i18n';
 
 type EventStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 type WhatsappStatus = 'PENDING' | 'SENT' | 'FAILED';
+type TFunc = ReturnType<typeof makeT>;
 
 interface EventRow {
   id: string;
@@ -50,6 +52,12 @@ interface EventDetail {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const drawErrorKeys: Record<string, string> = {
+  NOT_ENOUGH: 'admin.errors.drawNotEnough',
+  EMPTY_DOMAIN: 'admin.errors.drawEmptyDomain',
+  NO_SOLUTION: 'admin.errors.drawNoSolution',
+};
+
 function fmtDate(ms: number | null): string {
   if (!ms) return '';
   try {
@@ -71,10 +79,10 @@ function toTimestamp(v: string): number | null {
   return Number.isNaN(t) ? null : t;
 }
 
-const statusLabel: Record<EventStatus, string> = {
-  DRAFT: 'Esborrany',
-  ACTIVE: 'Actiu',
-  ARCHIVED: 'Arxivat',
+const waColor: Record<WhatsappStatus, string> = {
+  PENDING: 'bg-gold-100 text-gold-700',
+  SENT: 'bg-forest-100 text-forest-700',
+  FAILED: 'bg-red-100 text-red-700',
 };
 
 const statusColor: Record<EventStatus, string> = {
@@ -83,13 +91,9 @@ const statusColor: Record<EventStatus, string> = {
   ARCHIVED: 'bg-burgundy-100 text-burgundy-700',
 };
 
-const waColor: Record<WhatsappStatus, string> = {
-  PENDING: 'bg-gold-100 text-gold-700',
-  SENT: 'bg-forest-100 text-forest-700',
-  FAILED: 'bg-red-100 text-red-700',
-};
+export default function AdminPanel({ locale }: { locale: Locale }) {
+  const t = makeT(locale);
 
-export default function AdminPanel() {
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,11 +114,11 @@ export default function AdminPanel() {
       const json = await res.json();
       setEvents(json.events ?? []);
     } catch {
-      setError("No s'han pogut carregar els esdeveniments");
+      setError(t('admin.errors.loadEvents'));
     } finally {
       setLoadingEvents(false);
     }
-  }, []);
+  }, [t]);
 
   const loadDetail = useCallback(async (id: string, spoiler: boolean) => {
     const res = await fetch(`/api/admin/events/${id}?spoiler=${spoiler}`, {
@@ -139,10 +143,10 @@ export default function AdminPanel() {
           ? json.sessions.data
           : [];
       const def = sessions.find((s: { name?: string }) => s.name === 'default');
-      info = def?.status ? `Sessió "default": ${def.status}` : json.error ?? '';
+      info = def?.status ? `default: ${def.status}` : json.error ?? '';
       setWaha({ configured: true, info, error: json.error });
     } catch (e) {
-      setWaha({ configured: true, error: e instanceof Error ? e.message : 'WAHA no disponible' });
+      setWaha({ configured: true, error: e instanceof Error ? e.message : 'WAHA not available' });
     }
   }, []);
 
@@ -174,7 +178,7 @@ export default function AdminPanel() {
     });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setError(json.error ?? 'Error en crear');
+      setError(json.error ?? t('admin.errors.createEvent'));
       return;
     }
     e.currentTarget.reset();
@@ -186,7 +190,11 @@ export default function AdminPanel() {
     const res = await fetch(`/api/admin/events/${selectedId}/draw`, { method: 'POST' });
     const json = await res.json();
     if (!res.ok) {
-      alert(json.error ?? 'Error al sortejar');
+      const msg =
+        json.code && drawErrorKeys[json.code]
+          ? t(drawErrorKeys[json.code])
+          : json.error ?? t('admin.errors.drawFail');
+      alert(msg);
       return;
     }
     await loadDetail(selectedId, antiSpoiler);
@@ -200,7 +208,7 @@ export default function AdminPanel() {
   }
 
   async function deleteEvent(id: string) {
-    if (!confirm('Segur que vols eliminar aquest esdeveniment? Aquesta acció no es pot desfer.')) return;
+    if (!confirm(t('admin.errors.confirmDelete'))) return;
     await fetch(`/api/admin/events/${id}`, { method: 'DELETE' });
     setSelectedId(null);
     setDetail(null);
@@ -247,7 +255,7 @@ export default function AdminPanel() {
     });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      alert(json.error ?? 'Error en afegir');
+      alert(json.error ?? t('admin.errors.addFail'));
       return;
     }
     await loadDetail(selectedId, antiSpoiler);
@@ -301,7 +309,7 @@ export default function AdminPanel() {
           window.open(json.fallback, '_blank');
         }
       } catch {
-        // continua amb el següent
+        // continue with the next one
       }
       if (i < targets.length - 1) {
         await sleep(3000 + Math.random() * 2000);
@@ -318,7 +326,7 @@ export default function AdminPanel() {
       if (!res.ok && json.fallback) window.open(json.fallback, '_blank');
       if (!res.ok && json.error) alert(json.error);
     } catch {
-      alert('Error en enviar');
+      alert(t('admin.errors.sendFail'));
     }
     if (selectedId) await loadDetail(selectedId, antiSpoiler);
   }
@@ -326,7 +334,7 @@ export default function AdminPanel() {
   function copyLink(token: string) {
     const url = `${window.location.origin}/r/${token}`;
     navigator.clipboard?.writeText(url);
-    alert(`Enllaç copiat: ${url}`);
+    alert(t('admin.errors.linkCopied', { url }));
   }
 
   async function logout() {
@@ -340,9 +348,9 @@ export default function AdminPanel() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div>
             <h1 className="font-display text-xl font-black text-burgundy-800">
-              🎄 Amic Invisible
+              🎄 {t('appName')}
             </h1>
-            <p className="text-xs text-burgundy-900/50">Panell d&apos;administració</p>
+            <p className="text-xs text-burgundy-900/50">{t('admin.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-sm font-bold text-burgundy-700">
@@ -352,13 +360,13 @@ export default function AdminPanel() {
                 onChange={(e) => setAntiSpoiler(e.target.checked)}
                 className="h-4 w-4 accent-burgundy-600"
               />
-              Anti-spoiler
+              {t('admin.antiSpoiler')}
             </label>
             <button
               onClick={logout}
               className="rounded-full border border-burgundy-300 px-4 py-1.5 text-sm font-bold text-burgundy-700 transition hover:bg-burgundy-50"
             >
-              Sortir
+              {t('admin.logout')}
             </button>
           </div>
         </div>
@@ -366,29 +374,33 @@ export default function AdminPanel() {
 
       <div className="mx-auto max-w-5xl px-4 py-8">
         {error && (
-          <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
+          <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
 
         {!selectedId ? (
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div className="rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm">
-                <h2 className="font-display text-lg font-bold text-forest-700">Nou esdeveniment</h2>
+                <h2 className="font-display text-lg font-bold text-forest-700">
+                  {t('admin.newEvent.title')}
+                </h2>
                 <form onSubmit={createEvent} className="mt-4 space-y-3">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">Títol *</span>
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.newEvent.fieldTitle')}
+                      </span>
                       <input
                         name="title"
                         required
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                        placeholder="Amic invisible 2026"
+                        placeholder={t('admin.newEvent.titlePlaceholder')}
                       />
                     </label>
                     <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">Data i hora</span>
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.newEvent.date')}
+                      </span>
                       <input
                         name="eventDate"
                         type="datetime-local"
@@ -398,34 +410,40 @@ export default function AdminPanel() {
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">Lloc</span>
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.newEvent.location')}
+                      </span>
                       <input
                         name="location"
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                        placeholder="Casa l'àvia"
+                        placeholder={t('admin.newEvent.locationPlaceholder')}
                       />
                     </label>
                     <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">Pressupost</span>
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.newEvent.budget')}
+                      </span>
                       <input
                         name="budget"
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                        placeholder="25€"
+                        placeholder={t('admin.newEvent.budgetPlaceholder')}
                       />
                     </label>
                   </div>
                   <label className="block">
-                    <span className="text-xs font-bold text-burgundy-700">Normes</span>
+                    <span className="text-xs font-bold text-burgundy-700">
+                      {t('admin.newEvent.rules')}
+                    </span>
                     <textarea
                       name="rules"
                       rows={2}
                       className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                      placeholder="Res de regals usats…"
+                      placeholder={t('admin.newEvent.rulesPlaceholder')}
                     />
                   </label>
                   <label className="block">
                     <span className="text-xs font-bold text-burgundy-700">
-                      Plantilla de missatge (variables: {'{name} {friend} {title} {date} {location} {budget} {rules} {link}'})
+                      {t('admin.newEvent.template')}
                     </span>
                     <textarea
                       name="messageTemplate"
@@ -435,23 +453,25 @@ export default function AdminPanel() {
                   </label>
                   <label className="flex items-center gap-2 text-sm font-bold text-burgundy-700">
                     <input name="avoidTwoCycles" type="checkbox" className="h-4 w-4 accent-burgundy-600" />
-                    Evitar cicles de 2 (A regala a B i B regala a A)
+                    {t('admin.newEvent.avoidTwoCycles')}
                   </label>
                   <button
                     type="submit"
                     className="rounded-full bg-burgundy-600 px-6 py-2.5 font-bold text-cream transition hover:bg-burgundy-700"
                   >
-                    Crear esdeveniment
+                    {t('admin.newEvent.submit')}
                   </button>
                 </form>
               </div>
 
               <div className="mt-6">
-                <h2 className="mb-3 font-display text-lg font-bold text-forest-700">Esdeveniments</h2>
+                <h2 className="mb-3 font-display text-lg font-bold text-forest-700">
+                  {t('admin.events.title')}
+                </h2>
                 {loadingEvents ? (
-                  <p className="text-sm text-burgundy-900/50">Carregant…</p>
+                  <p className="text-sm text-burgundy-900/50">{t('admin.events.loading')}</p>
                 ) : events.length === 0 ? (
-                  <p className="text-sm text-burgundy-900/50">Encara no hi ha cap esdeveniment.</p>
+                  <p className="text-sm text-burgundy-900/50">{t('admin.events.empty')}</p>
                 ) : (
                   <ul className="space-y-3">
                     {events.map((ev) => (
@@ -460,32 +480,30 @@ export default function AdminPanel() {
                         className="rounded-2xl border border-gold-200 bg-white/70 p-4 shadow-sm"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <button
-                            onClick={() => setSelectedId(ev.id)}
-                            className="text-left"
-                          >
+                          <button onClick={() => setSelectedId(ev.id)} className="text-left">
                             <span className="font-display text-lg font-bold text-burgundy-800 hover:underline">
                               {ev.title}
                             </span>
                             <span className="ml-2 text-sm text-burgundy-900/50">
-                              {fmtDate(ev.eventDate) || 'Sense data'} · {ev.participantCount} participants
+                              {fmtDate(ev.eventDate) || t('admin.events.withoutDate')} ·{' '}
+                              {t('admin.events.participants', { n: ev.participantCount })}
                             </span>
                           </button>
                           <div className="flex items-center gap-2">
                             <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusColor[ev.status]}`}>
-                              {statusLabel[ev.status]}
+                              {t(`admin.status.${ev.status}`)}
                             </span>
                             <button
                               onClick={() => cloneEvent(ev.id)}
                               className="rounded-full border border-forest-300 px-3 py-1 text-xs font-bold text-forest-700 hover:bg-forest-50"
                             >
-                              Clonar
+                              {t('admin.events.clone')}
                             </button>
                             <button
                               onClick={() => deleteEvent(ev.id)}
                               className="rounded-full border border-red-300 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50"
                             >
-                              Eliminar
+                              {t('admin.events.delete')}
                             </button>
                           </div>
                         </div>
@@ -498,28 +516,30 @@ export default function AdminPanel() {
 
             <div>
               <div className="rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm">
-                <h2 className="font-display text-lg font-bold text-forest-700">WhatsApp (WAHA)</h2>
+                <h2 className="font-display text-lg font-bold text-forest-700">
+                  {t('admin.waha.title')}
+                </h2>
                 <p className="mt-1 text-sm text-burgundy-900/60">
                   {waha?.configured === false
-                    ? 'WAHA_URL no configurada.'
-                    : waha?.info || waha?.error || 'Connectat.'}
+                    ? t('admin.waha.notConfigured')
+                    : waha?.info || waha?.error || t('admin.waha.connected')}
                 </p>
                 {waha?.configured !== false && (
                   <div className="mt-3">
                     <img
                       key={qrNonce}
                       src={`/api/admin/waha/qr?t=${qrNonce}`}
-                      alt="QR de WhatsApp"
+                      alt="WhatsApp QR"
                       className="mx-auto h-48 w-48 rounded-xl bg-white p-2 shadow"
                     />
                     <button
                       onClick={() => setQrNonce((n) => n + 1)}
                       className="mt-3 w-full rounded-full bg-forest-600 px-4 py-2 text-sm font-bold text-cream hover:bg-forest-700"
                     >
-                      Refrescar QR
+                      {t('admin.waha.refresh')}
                     </button>
                     <p className="mt-2 text-center text-xs text-burgundy-900/50">
-                      Escaneja amb WhatsApp per vincular el número. Sessió: default
+                      {t('admin.waha.hint')}
                     </p>
                   </div>
                 )}
@@ -535,7 +555,7 @@ export default function AdminPanel() {
               }}
               className="mb-4 rounded-full border border-burgundy-300 px-4 py-1.5 text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
             >
-              ← Tornar
+              {t('admin.detail.back')}
             </button>
 
             {detail && (
@@ -556,7 +576,7 @@ export default function AdminPanel() {
                               : 'border border-burgundy-300 text-burgundy-700 hover:bg-burgundy-50'
                           }`}
                         >
-                          {statusLabel[s]}
+                          {t(`admin.status.${s}`)}
                         </button>
                       ))}
                     </div>
@@ -564,7 +584,9 @@ export default function AdminPanel() {
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">Lloc</span>
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.location')}
+                      </span>
                       <input
                         defaultValue={detail.event.location ?? ''}
                         onBlur={(e) => updateEventField('location', e.target.value)}
@@ -572,7 +594,9 @@ export default function AdminPanel() {
                       />
                     </label>
                     <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">Pressupost</span>
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.budget')}
+                      </span>
                       <input
                         defaultValue={detail.event.budget ?? ''}
                         onBlur={(e) => updateEventField('budget', e.target.value)}
@@ -586,7 +610,7 @@ export default function AdminPanel() {
                         onChange={(e) => updateEventField('avoidTwoCycles', e.target.checked)}
                         className="h-4 w-4 accent-burgundy-600"
                       />
-                      Evitar cicles de 2
+                      {t('admin.detail.avoidTwoCycles')}
                     </label>
                   </div>
 
@@ -595,27 +619,25 @@ export default function AdminPanel() {
                     disabled={detail.participants.length < 2}
                     className="mt-4 rounded-full bg-burgundy-600 px-6 py-2.5 font-bold text-cream transition hover:bg-burgundy-700 disabled:opacity-50"
                   >
-                    🎲 Fer el sorteig
+                    {t('admin.detail.draw')}
                   </button>
                   {detail.participants.length < 2 && (
                     <p className="mt-2 text-xs text-burgundy-900/50">
-                      Calen almenys 2 participants per sortejar.
+                      {t('admin.detail.needParticipants')}
                     </p>
                   )}
                 </div>
 
                 <div className="rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm">
                   <h3 className="font-display text-lg font-bold text-forest-700">
-                    Participants ({detail.participants.length})
+                    {t('admin.participants.title', { n: detail.participants.length })}
                   </h3>
-                  <p className="text-xs text-burgundy-900/50">
-                    Format per afegir: «Nom, telèfon» (una línia per participant).
-                  </p>
+                  <p className="text-xs text-burgundy-900/50">{t('admin.participants.help')}</p>
                   <textarea
                     id="bulkParticipants"
                     rows={3}
                     className="mt-2 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 text-sm"
-                    placeholder={'Anna, 600112233\nPere, 611223344'}
+                    placeholder={t('admin.participants.placeholder')}
                   />
                   <button
                     onClick={() => {
@@ -625,19 +647,19 @@ export default function AdminPanel() {
                     }}
                     className="mt-2 rounded-full bg-forest-600 px-5 py-2 text-sm font-bold text-cream hover:bg-forest-700"
                   >
-                    Afegir participants
+                    {t('admin.participants.add')}
                   </button>
 
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gold-200 text-left text-xs text-burgundy-900/50">
-                          <th className="py-2 pr-2">Nom</th>
-                          <th className="py-2 pr-2">Telèfon</th>
-                          {!antiSpoiler && <th className="py-2 pr-2">Regala a</th>}
-                          <th className="py-2 pr-2">WhatsApp</th>
-                          <th className="py-2 pr-2">Vist</th>
-                          <th className="py-2">Accions</th>
+                          <th className="py-2 pr-2">{t('admin.participants.colName')}</th>
+                          <th className="py-2 pr-2">{t('admin.participants.colPhone')}</th>
+                          {!antiSpoiler && <th className="py-2 pr-2">{t('admin.participants.colGivesTo')}</th>}
+                          <th className="py-2 pr-2">{t('admin.participants.colWhatsapp')}</th>
+                          <th className="py-2 pr-2">{t('admin.participants.colViewed')}</th>
+                          <th className="py-2">{t('admin.participants.colActions')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -674,13 +696,13 @@ export default function AdminPanel() {
                                   onClick={() => copyLink(p.token)}
                                   className="rounded border border-burgundy-200 px-2 py-0.5 text-xs text-burgundy-700 hover:bg-burgundy-50"
                                 >
-                                  Enllaç
+                                  {t('admin.participants.actionLink')}
                                 </button>
                                 <button
                                   onClick={() => sendOne(p.id)}
                                   className="rounded border border-forest-200 px-2 py-0.5 text-xs text-forest-700 hover:bg-forest-50"
                                 >
-                                  Enviar
+                                  {t('admin.participants.actionSend')}
                                 </button>
                                 <button
                                   onClick={() => deleteParticipant(p.id)}
@@ -703,25 +725,25 @@ export default function AdminPanel() {
                       className="rounded-full bg-gold-500 px-5 py-2 text-sm font-bold text-burgundy-900 hover:bg-gold-400 disabled:opacity-50"
                     >
                       {sending
-                        ? `Enviant ${sending.index}/${sending.total} (${sending.name})…`
-                        : 'Enviar a tots per WhatsApp (cua)'}
+                        ? t('admin.send.sending', {
+                            index: sending.index,
+                            total: sending.total,
+                            name: sending.name,
+                          })
+                        : t('admin.send.queue')}
                     </button>
-                    <p className="mt-1 text-xs text-burgundy-900/50">
-                      S&apos;envia un a un amb un retard aleatori de 3–5 s. Si falla, s&apos;obre el botó wa.me.
-                    </p>
+                    <p className="mt-1 text-xs text-burgundy-900/50">{t('admin.send.hint')}</p>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm">
                   <h3 className="font-display text-lg font-bold text-forest-700">
-                    Exclusions manuals
+                    {t('admin.exclusions.title')}
                   </h3>
-                  <p className="text-xs text-burgundy-900/50">
-                    Impedeix que algú regali a una persona concreta. Les de telèfon compartit (SAME_PHONE) són automàtiques.
-                  </p>
+                  <p className="text-xs text-burgundy-900/50">{t('admin.exclusions.help')}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <GiverReceiverSelect
-                      label="Qui"
+                    <ExclusionEditor
+                      t={t}
                       participants={detail.participants}
                       onAdd={(g, r) => addExclusion(g, r)}
                     />
@@ -733,7 +755,7 @@ export default function AdminPanel() {
                       return (
                         <li key={e.id} className="flex items-center justify-between rounded-lg bg-cream px-3 py-1.5">
                           <span>
-                            <b>{g}</b> no pot regalar a <b>{r}</b>{' '}
+                            {t('admin.exclusions.cannotGive', { giver: g, receiver: r })}{' '}
                             <span className="ml-1 rounded bg-gold-100 px-1.5 text-xs text-gold-700">
                               {e.reason}
                             </span>
@@ -760,12 +782,12 @@ export default function AdminPanel() {
   );
 }
 
-function GiverReceiverSelect({
-  label,
+function ExclusionEditor({
+  t,
   participants,
   onAdd,
 }: {
-  label: string;
+  t: TFunc;
   participants: ParticipantRow[];
   onAdd: (giverId: string, receiverId: string) => void;
 }) {
@@ -773,26 +795,26 @@ function GiverReceiverSelect({
   const [receiver, setReceiver] = useState('');
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm font-bold text-burgundy-700">{label}</span>
+      <span className="text-sm font-bold text-burgundy-700">{t('admin.exclusions.who')}</span>
       <select
         value={giver}
         onChange={(e) => setGiver(e.target.value)}
         className="rounded-lg border border-burgundy-200 bg-cream px-2 py-1.5 text-sm"
       >
-        <option value="">Qui regala</option>
+        <option value="">{t('admin.exclusions.whoGives')}</option>
         {participants.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
           </option>
         ))}
       </select>
-      <span className="text-sm text-burgundy-900/50">no regala a</span>
+      <span className="text-sm text-burgundy-900/50">{t('admin.exclusions.notTo')}</span>
       <select
         value={receiver}
         onChange={(e) => setReceiver(e.target.value)}
         className="rounded-lg border border-burgundy-200 bg-cream px-2 py-1.5 text-sm"
       >
-        <option value="">Qui rep</option>
+        <option value="">{t('admin.exclusions.whoReceives')}</option>
         {participants.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
@@ -809,7 +831,7 @@ function GiverReceiverSelect({
         }}
         className="rounded-full border border-burgundy-300 px-3 py-1.5 text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
       >
-        Afegir exclusió
+        {t('admin.exclusions.add')}
       </button>
     </div>
   );

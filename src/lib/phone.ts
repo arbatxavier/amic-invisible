@@ -1,6 +1,6 @@
 /**
- * Normaliza un teléfono a dígitos internacionales sin '+'.
- * Ejemplo: "600 11 22 33", "+34 600112233", "0034 600112233" -> "34600112233"
+ * Normalizes a phone number to international digits without '+'.
+ * Example: "600 11 22 33", "+34 600112233", "0034 600112233" -> "34600112233"
  */
 export function normalizePhone(input: string | null | undefined): string {
   if (!input) return '';

@@ -23,7 +23,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      # Misma clave que usas en WAHA_API_KEY de la app
+      # Same key you use in the app's WAHA_API_KEY
       WHATSAPP_API_KEY: ${WAHA_API_KEY:-}
     volumes:
       - ./waha-data:/app/.sessions

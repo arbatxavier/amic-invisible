@@ -12,14 +12,14 @@ export async function POST(
 ) {
   const { id } = await params;
   const event = getEventById(id);
-  if (!event) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
   const giverId = typeof body.giverId === 'string' ? body.giverId : '';
   const receiverId = typeof body.receiverId === 'string' ? body.receiverId : '';
 
   if (!giverId || !receiverId || giverId === receiverId) {
-    return NextResponse.json({ error: 'Exclusió no vàlida' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid exclusion' }, { status: 400 });
   }
 
   db.insert(exclusions)

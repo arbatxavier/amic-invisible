@@ -2,7 +2,7 @@
 # Amic Invisible - Next.js (standalone) + better-sqlite3
 # ===============================
 
-# 1. Dependencias
+# 1. Dependencies
 FROM node:20-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -29,16 +29,16 @@ RUN groupadd --system --gid 1001 nodejs \
 
 COPY --from=builder /app/public ./public
 
-# Standalone output + assets estáticos
+# Standalone output + static assets
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Módulo nativo better-sqlite3 (el tracing de standalone no incluye el .node)
+# better-sqlite3 native module (standalone tracing misses the .node binary)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 
-# Directorio de datos (volumen persistente)
+# Data directory (persistent volume)
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 USER nextjs

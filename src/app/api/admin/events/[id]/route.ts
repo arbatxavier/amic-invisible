@@ -16,7 +16,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const event = getEventById(id);
-  if (!event) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Modo anti-spoiler: por defecto oculta assignedTo al admin.
   const spoiler = new URL(req.url).searchParams.get('spoiler') !== 'false';
@@ -57,7 +57,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const event = getEventById(id);
-  if (!event) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
   const updates: Record<string, unknown> = { updatedAt: Date.now() };

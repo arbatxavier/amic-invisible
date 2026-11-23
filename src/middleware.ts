@@ -20,7 +20,7 @@ export async function middleware(req: NextRequest) {
   const pw = process.env.ADMIN_PASSWORD;
   if (!pw) {
     if (path.startsWith('/api/')) {
-      return NextResponse.json({ error: 'ADMIN_PASSWORD no configurada' }, { status: 500 });
+      return NextResponse.json({ error: 'ADMIN_PASSWORD is not configured' }, { status: 500 });
     }
     return NextResponse.redirect(new URL('/admin/login', req.url));
   }
@@ -31,7 +31,7 @@ export async function middleware(req: NextRequest) {
 
   if (!authed && !isLogin) {
     if (path.startsWith('/api/')) {
-      return NextResponse.json({ error: 'No autoritzat' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     return NextResponse.redirect(new URL('/admin/login', req.url));
   }

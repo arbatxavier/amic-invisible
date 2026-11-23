@@ -17,7 +17,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const src = getEventById(id);
-  if (!src) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!src) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const now = Date.now();
   const newEventId = newId();
@@ -61,7 +61,7 @@ export async function POST(
       .run();
   }
 
-  // Copia les exclusions MANUAL (remejant ids). Les SAME_PHONE es regeneren.
+  // Copy MANUAL exclusions (remapping ids). SAME_PHONE ones are regenerated.
   for (const e of getExclusionsByEvent(id)) {
     if (e.reason !== 'MANUAL') continue;
     const giver = idMap.get(e.giverId);

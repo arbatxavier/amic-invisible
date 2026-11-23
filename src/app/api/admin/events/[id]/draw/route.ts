@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { events, participants } from '@/lib/db/schema';
-import { runDraw } from '@/lib/draw';
+import { runDraw, DrawError } from '@/lib/draw';
 import {
   getEventById,
   getExclusionsByEvent,
@@ -17,7 +17,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const event = getEventById(id);
-  if (!event) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const parts = getParticipantsByEvent(id);
   const excl = getExclusionsByEvent(id);
@@ -30,8 +30,9 @@ export async function POST(
       avoidTwoCycles: event.avoidTwoCycles,
     });
   } catch (err) {
+    const code = err instanceof DrawError ? err.code : undefined;
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Error al sortejar' },
+      { error: err instanceof Error ? err.message : 'Error while drawing', code },
       { status: 400 },
     );
   }

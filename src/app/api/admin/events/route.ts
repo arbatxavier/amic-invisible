@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const title = typeof body.title === 'string' ? body.title.trim() : '';
 
   if (!title) {
-    return NextResponse.json({ error: 'El títol és obligatori' }, { status: 400 });
+    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
   }
 
   const now = Date.now();

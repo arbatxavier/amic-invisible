@@ -14,8 +14,8 @@ import {
 export const dynamic = 'force-dynamic';
 
 /**
- * Envia el missatge a UN sol participant. La cua (amb retardo aleatori de 3-5s)
- * la controla el frontend crida a crida.
+ * Sends the message to a SINGLE participant. The queue (with a random 3-5s
+ * delay between calls) is driven by the frontend, call by call.
  */
 export async function POST(
   req: Request,
@@ -23,20 +23,20 @@ export async function POST(
 ) {
   const { id } = await params;
   const p = getParticipantById(id);
-  if (!p) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const event = getEventById(p.eventId);
-  if (!event) return NextResponse.json({ error: 'Esdeveniment no trobat' }, { status: 404 });
+  if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 
   if (!p.assignedToId) {
-    return NextResponse.json({ error: "Encara no s'ha fet el sorteig" }, { status: 400 });
+    return NextResponse.json({ error: 'The draw has not been done yet' }, { status: 400 });
   }
 
   const assigned = getParticipantById(p.assignedToId);
-  if (!assigned) return NextResponse.json({ error: 'Assignació no trobada' }, { status: 400 });
+  if (!assigned) return NextResponse.json({ error: 'Assignment not found' }, { status: 400 });
 
   if (!p.phone) {
-    return NextResponse.json({ error: 'Aquest participant no té telèfon' }, { status: 400 });
+    return NextResponse.json({ error: 'This participant has no phone number' }, { status: 400 });
   }
 
   const baseUrl = getBaseUrl(req);
@@ -71,7 +71,7 @@ export async function POST(
       {
         ok: false,
         status: 'FAILED',
-        error: err instanceof Error ? err.message : 'Error desconegut',
+        error: err instanceof Error ? err.message : 'Unknown error',
         fallback,
       },
       { status: 502 },

@@ -7,28 +7,33 @@ export interface DrawOptions {
   participantIds: string[];
   exclusions: DrawExclusion[];
   avoidTwoCycles: boolean;
-  /** Historial de sorteigs anteriors: giverId -> receiverId a evitar repetir. Opcional. */
+  /** History of previous draws: giverId -> receiverId to avoid repeating. Optional. */
   previousAssignments?: Record<string, string>;
 }
 
+export type DrawErrorCode = 'NOT_ENOUGH' | 'EMPTY_DOMAIN' | 'NO_SOLUTION';
+
 export class DrawError extends Error {
-  constructor(message: string) {
+  code: DrawErrorCode;
+
+  constructor(message: string, code: DrawErrorCode) {
     super(message);
     this.name = 'DrawError';
+    this.code = code;
   }
 }
 
 /**
- * Motor de sorteig amb backtracking + heurística MRV (Minimum Remaining Values).
- * Respecta: auto-exclusió, exclusions (SAME_PHONE / MANUAL), historial anterior
- * i evita cicles de 2 (A->B i B->A) quan avoidTwoCycles és cert.
+ * Secret-santa engine using backtracking + MRV (Minimum Remaining Values).
+ * Respects self-exclusion, SAME_PHONE and MANUAL exclusions, previous history
+ * (optional) and avoids 2-cycles (A->B and B->A) when avoidTwoCycles is true.
  */
 export function runDraw(opts: DrawOptions): Record<string, string> {
   const { participantIds, exclusions, avoidTwoCycles, previousAssignments } = opts;
   const n = participantIds.length;
 
   if (n < 2) {
-    throw new DrawError('Cal afegir com a mínim 2 participants per fer el sorteig.');
+    throw new DrawError('At least 2 participants are required to draw.', 'NOT_ENOUGH');
   }
 
   const forbidden: Record<string, Set<string>> = {};
@@ -52,7 +57,8 @@ export function runDraw(opts: DrawOptions): Record<string, string> {
   });
   if (emptyDomain.length > 0) {
     throw new DrawError(
-      'Sense solució: hi ha participants que no poden regalar a ningú per les exclusions. Revisa les exclusions manuals o de telèfon compartit.',
+      'No solution: some participants cannot give to anyone due to exclusions. Review the manual or shared-phone exclusions.',
+      'EMPTY_DOMAIN',
     );
   }
 
@@ -103,7 +109,8 @@ export function runDraw(opts: DrawOptions): Record<string, string> {
   const solved = backtrack(participantIds);
   if (!solved) {
     throw new DrawError(
-      "No s'ha trobat cap combinació vàlida amb les restriccions actuals (auto-exclusió, telèfon compartit, exclusions manuals i/o evitar cicles de 2). Prova de treure alguna restricció.",
+      'No valid combination found with the current constraints (self-exclusion, shared phone, manual exclusions and/or avoid 2-cycles). Try removing a constraint.',
+      'NO_SOLUTION',
     );
   }
 

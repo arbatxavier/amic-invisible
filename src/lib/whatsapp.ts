@@ -12,7 +12,7 @@ export function getWahaConfig(): WahaConfig {
 
 export async function wahaRequest(path: string, init: RequestInit = {}): Promise<Response> {
   const { url, apiKey } = getWahaConfig();
-  if (!url) throw new Error('WAHA_URL no configurada');
+  if (!url) throw new Error('WAHA_URL is not configured');
 
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
@@ -26,7 +26,7 @@ export async function wahaRequest(path: string, init: RequestInit = {}): Promise
   });
 }
 
-/** S'assegura que la sessió "default" existeix (és idempotent). */
+/** Ensures the "default" session exists (idempotent). */
 export async function ensureDefaultSession(): Promise<void> {
   try {
     await wahaRequest('/api/sessions', {
@@ -34,11 +34,11 @@ export async function ensureDefaultSession(): Promise<void> {
       body: JSON.stringify({ name: 'default' }),
     });
   } catch {
-    // La sessió pot existir o WAHA pot no estar disponible encara.
+    // The session may already exist, or WAHA may not be ready yet.
   }
 }
 
-/** Envia un missatge de text usant sempre la sessió "default" i JID {phone}@c.us */
+/** Sends a text message always using the "default" session and JID {phone}@c.us */
 export async function sendWhatsAppText(phone: string, text: string): Promise<void> {
   const jid = `${phone}@c.us`;
   const res = await wahaRequest('/api/sendText', {
@@ -48,6 +48,6 @@ export async function sendWhatsAppText(phone: string, text: string): Promise<voi
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`WAHA va respondre ${res.status}: ${body.slice(0, 300)}`);
+    throw new Error(`WAHA responded ${res.status}: ${body.slice(0, 300)}`);
   }
 }

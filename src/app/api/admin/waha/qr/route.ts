@@ -4,13 +4,13 @@ import { getWahaConfig, ensureDefaultSession } from '@/lib/whatsapp';
 export const dynamic = 'force-dynamic';
 
 /**
- * Proxya el QR de la sessió "default" de WAHA per poder escanejar-lo
- * des del panell d'administració sense exposar WAHA directament.
+ * Proxies the QR of the "default" WAHA session so it can be scanned
+ * from the admin panel without exposing WAHA directly.
  */
 export async function GET() {
   const { url, apiKey } = getWahaConfig();
   if (!url) {
-    return NextResponse.json({ error: 'WAHA_URL no configurada' }, { status: 400 });
+    return NextResponse.json({ error: 'WAHA_URL is not configured' }, { status: 400 });
   }
 
   await ensureDefaultSession();
@@ -27,7 +27,7 @@ export async function GET() {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'WAHA no disponible' },
+      { error: err instanceof Error ? err.message : 'WAHA unavailable' },
       { status: 502 },
     );
   }
@@ -47,7 +47,7 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { error: `No s'ha pogut obtenir el QR (estat ${res.status}). Obre el dashboard de WAHA.` },
+    { error: `Could not fetch the QR (status ${res.status}). Open the WAHA dashboard.` },
     { status: 502 },
   );
 }

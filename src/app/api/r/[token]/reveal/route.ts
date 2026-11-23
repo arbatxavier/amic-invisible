@@ -7,8 +7,8 @@ import { getEventById, getParticipantByToken } from '@/lib/repo';
 export const dynamic = 'force-dynamic';
 
 /**
- * Anti-spoiler: el destinatari només s'obté i es marca viewedAt aquí,
- * quan l'usuari prem el botó de revelar al client.
+ * Anti-spoiler: the recipient is only retrieved and marked as viewed here,
+ * when the user taps the reveal button on the client.
  */
 export async function POST(
   _req: Request,
@@ -18,17 +18,17 @@ export async function POST(
 
   const participant = getParticipantByToken(token);
   if (!participant) {
-    return NextResponse.json({ error: 'Enllaç no vàlid' }, { status: 404 });
+    return NextResponse.json({ error: 'Invalid link' }, { status: 404 });
   }
 
   const event = getEventById(participant.eventId);
   if (!event) {
-    return NextResponse.json({ error: 'Esdeveniment no trobat' }, { status: 404 });
+    return NextResponse.json({ error: 'Event not found' }, { status: 404 });
   }
 
   if (!participant.assignedToId) {
     return NextResponse.json(
-      { error: "El sorteig encara no s'ha fet. Torna-ho a provar més tard." },
+      { error: 'The draw has not been done yet. Please try again later.' },
       { status: 409 },
     );
   }
@@ -40,7 +40,7 @@ export async function POST(
     .get();
 
   if (!assigned) {
-    return NextResponse.json({ error: 'Assignació no trobada' }, { status: 404 });
+    return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
   }
 
   const now = Date.now();

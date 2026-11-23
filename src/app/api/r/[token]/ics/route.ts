@@ -5,8 +5,8 @@ import { buildIcs } from '@/lib/ics';
 export const dynamic = 'force-dynamic';
 
 /**
- * Descarrega un .ics amb data, lloc, normes i enllaç privat a DESCRIPTION.
- * No inclou mai el nom assignat en text pla ni modifica viewedAt.
+ * Downloads a .ics with date, location, rules and a private link in DESCRIPTION.
+ * It never includes the assigned name in plain text and never touches viewedAt.
  */
 export async function GET(
   req: Request,
@@ -16,22 +16,22 @@ export async function GET(
 
   const participant = getParticipantByToken(token);
   if (!participant) {
-    return new NextResponse('No trobat', { status: 404 });
+    return new NextResponse('Not found', { status: 404 });
   }
 
   const event = getEventById(participant.eventId);
   if (!event) {
-    return new NextResponse('No trobat', { status: 404 });
+    return new NextResponse('Not found', { status: 404 });
   }
 
   const baseUrl = getBaseUrl(req);
   const link = `${baseUrl}/r/${participant.token}`;
 
   const description = [
-    `Hola ${participant.name}!`,
+    `Hello ${participant.name}!`,
     event.rules || '',
     '',
-    `Enllaç privat: ${link}`,
+    `Private link: ${link}`,
   ]
     .filter(Boolean)
     .join('\n');

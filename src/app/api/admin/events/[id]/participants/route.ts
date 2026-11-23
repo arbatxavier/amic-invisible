@@ -17,7 +17,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const event = getEventById(id);
-  if (!event) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
   const list = Array.isArray(body.participants) ? body.participants : [body];
@@ -49,10 +49,10 @@ export async function POST(
   }
 
   if (created.length === 0) {
-    return NextResponse.json({ error: 'No s\'ha pogut crear cap participant' }, { status: 400 });
+    return NextResponse.json({ error: 'Could not create any participant' }, { status: 400 });
   }
 
-  // Regla de telèfon compartit: sincronitza exclusions SAME_PHONE.
+  // Shared-phone rule: sync SAME_PHONE exclusions.
   syncSamePhoneExclusions(id);
 
   return NextResponse.json(

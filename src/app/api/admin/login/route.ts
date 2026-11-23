@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const configured = process.env.ADMIN_PASSWORD;
 
   if (!configured || password !== configured) {
-    return NextResponse.json({ error: 'Contrasenya incorrecta' }, { status: 401 });
+    return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
   }
 
   const token = hashAdminPassword(configured);

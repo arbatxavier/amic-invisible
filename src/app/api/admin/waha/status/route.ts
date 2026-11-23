@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const res = await wahaRequest('/api/sessions?all=true');
     if (!res.ok) {
-      return NextResponse.json({ configured: true, error: `estat ${res.status}` });
+      return NextResponse.json({ configured: true, error: `status ${res.status}` });
     }
     const data = await res.json();
     return NextResponse.json({ configured: true, sessions: data });

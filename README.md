@@ -1,180 +1,187 @@
 # Amic Invisible 🎄🎁
 
-Aplicación web **fullstack** para organizar el sorteo del "Amic Invisible" (amigo invisible) de la familia o los amigos, con reparto secreto de regalos y envío automático por WhatsApp. Hecha en **Next.js (App Router) + TypeScript + Tailwind CSS**, lista para desplegar en **Docker** (`output: 'standalone'`).
+A **fullstack** web app to run a "Secret Santa" (Amic Invisible) draw for family or friends, with secret gift assignment and automatic WhatsApp delivery. Built with **Next.js (App Router) + TypeScript + Tailwind CSS**, ready to deploy with **Docker** (`output: 'standalone'`).
 
-> Diseñada para desplegarse en un servidor Hetzner con **Coolify**, pero funciona con cualquier Docker.
-
----
-
-## Características
-
-- **Sorteo secreto** con motor de *backtracking* + heurística **MRV** (Minimum Remaining Values).
-- **Regla de teléfono compartido**: si dos personas del mismo evento comparten número (madre e hija, por ejemplo), se crean exclusiones bidireccionales automáticas (`SAME_PHONE`) para que no se regalen entre sí.
-- **Anti-spoiler**: la página pública `/r/[token]` **nunca** devuelve ni pinta a quién le toca regalar hasta que el usuario pulsa "Revelar". El nombre solo se obtiene (y se marca como visto) vía `POST /api/r/[token]/reveal`.
-- **Panel de administración** `/admin` protegido por contraseña con cookie HTTP-only.
-- **WhatsApp** integrado con [WAHA](https://waha.devlike.pro/) (sesión `default`), con cola de envío controlada desde el frontend y fallback a botón `wa.me`.
-- **Festiva y mobile-first**: Framer Motion, canvas-confetti, tarjeta 3D, paleta burdeos / verde bosque / dorado.
-- **Calendario**: descarga de un `.ics` con fecha, lugar, normas y enlace privado (sin el nombre asignado en texto plano).
+> Designed to be deployed on a Hetzner server with **Coolify**, but works with any Docker setup.
 
 ---
 
-## Stack técnico
+## Features
 
-| Capa | Tecnología |
+- **Secret draw** powered by a *backtracking* engine with the **MRV** (Minimum Remaining Values) heuristic.
+- **Shared-phone rule**: if two people in the same event share a phone number (e.g. mother and daughter), bidirectional exclusions (`SAME_PHONE`) are created automatically so they never draw each other.
+- **Anti-spoiler**: the public `/r/[token]` page **never** returns or renders who the person is drawing for until they tap "Reveal". The name is only obtained (and marked as viewed) via `POST /api/r/[token]/reveal`.
+- **Admin panel** `/admin` protected by a password with an HTTP-only cookie.
+- **WhatsApp** integrated with [WAHA](https://waha.devlike.pro/) (`default` session), with a send queue driven from the frontend and a `wa.me` button fallback.
+- **Festive and mobile-first**: Framer Motion, canvas-confetti, a 3D card, burgundy / forest green / gold palette.
+- **Calendar**: downloads an `.ics` with date, location, rules and a private link (never the assigned name in plain text).
+- **i18n**: the UI automatically switches between **Catalan** and **Spanish** based on the device language.
+
+---
+
+## Tech stack
+
+| Layer | Technology |
 |------|-----------|
-| Framework | Next.js 15 (App Router, RSC, Server Actions/Route Handlers) |
-| Lenguaje | TypeScript |
-| Estilos | Tailwind CSS |
-| Animaciones | Framer Motion + canvas-confetti |
-| Base de datos | SQLite con `better-sqlite3` + Drizzle ORM |
-| Identificadores | nanoid (tokens de 24 caracteres) |
-| WhatsApp | WAHA (`devlikeapro/waha`) vía HTTP API |
-| Despliegue | Docker (`output: 'standalone'`) |
+| Framework | Next.js 15 (App Router, RSC, Route Handlers) |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Animations | Framer Motion + canvas-confetti |
+| Database | SQLite with `better-sqlite3` + Drizzle ORM |
+| Identifiers | nanoid (24-char tokens) |
+| WhatsApp | WAHA (`devlikeapro/waha`) over its HTTP API |
+| Deploy | Docker (`output: 'standalone'`) |
 
 ---
 
-## Cómo funciona
+## How it works
 
-### Modelo de datos
+### Data model
 
-Tres tablas (creadas automáticamente con `CREATE TABLE IF NOT EXISTS` al arrancar la conexión):
+Three tables (created automatically with `CREATE TABLE IF NOT EXISTS` when the connection starts):
 
-- **`events`**: `id`, `title`, `eventDate`, `location`, `budget`, `rules`, `status` (`DRAFT | ACTIVE | ARCHIVED`), `avoidTwoCycles` (booleano), `messageTemplate`.
-- **`participants`**: `id`, `eventId`, `name`, `phone` (normalizado a E.164 sin `+`, ej. `34600112233`, **no único**), `token` (nanoid 24), `assignedToId` (nullable), `whatsappStatus` (`PENDING | SENT | FAILED`), `whatsappSentAt`, `viewedAt`.
+- **`events`**: `id`, `title`, `eventDate`, `location`, `budget`, `rules`, `status` (`DRAFT | ACTIVE | ARCHIVED`), `avoidTwoCycles` (boolean), `messageTemplate`.
+- **`participants`**: `id`, `eventId`, `name`, `phone` (normalized to E.164 without `+`, e.g. `34600112233`, **not unique**), `token` (nanoid 24), `assignedToId` (nullable), `whatsappStatus` (`PENDING | SENT | FAILED`), `whatsappSentAt`, `viewedAt`.
 - **`exclusions`**: `id`, `eventId`, `giverId`, `receiverId`, `reason` (`SAME_PHONE | MANUAL`).
 
-### Motor de sorteo (`src/lib/draw.ts`)
+### Draw engine (`src/lib/draw.ts`)
 
-Algoritmo de backtracking con heurística MRV que respeta:
+Backtracking algorithm with the MRV heuristic that respects:
 
-1. **Auto-exclusión** (nadie se regala a sí mismo).
-2. **Exclusiones `SAME_PHONE`** (teléfono compartido).
-3. **Exclusiones `MANUAL`** (definidas por el admin).
-4. **`avoidTwoCycles`** (evita que A→B y B→A).
-5. Historial de sorteos anteriores (opcional, vía parámetro).
+1. **Self-exclusion** (nobody draws themselves).
+2. **`SAME_PHONE` exclusions** (shared phone).
+3. **`MANUAL` exclusions** (defined by the admin).
+4. **`avoidTwoCycles`** (prevents A→B and B→A).
+5. History of previous draws (optional, via parameter).
 
-Si el grafo no tiene solución, devuelve un error descriptivo.
+If the graph has no solution, it returns a descriptive error.
 
 ### Anti-spoiler
 
-- `GET /r/[token]` y `generateMetadata` **solo** devuelven datos públicos (nombre del participante y detalles del evento). **Nunca** `assignedTo` ni modifican `viewedAt`.
-- El destinatario se obtiene **únicamente** al pulsar "Revelar", mediante `POST /api/r/[token]/reveal`, que marca `viewedAt` y devuelve el nombre.
+- `GET /r/[token]` and `generateMetadata` **only** return public data (participant name and event details). **Never** `assignedTo`, and they never modify `viewedAt`.
+- The recipient is obtained **only** when tapping "Reveal", via `POST /api/r/[token]/reveal`, which marks `viewedAt` and returns the name.
 
 ### WhatsApp
 
-- El admin vincula el número escaneando el **QR** que se muestra en `/admin` (proxy a WAHA, sesión `default`).
-- El envío se hace **llamada a llamada** desde el frontend: cada participante dispara `POST /api/admin/participants/[id]/send-whatsapp` con un **retardo aleatorio de 3–5 s** entre mensajes.
-- Usa siempre `session: "default"` y `chatId: "{phone}@c.us"`.
-- Si falla, marca `whatsappStatus = FAILED` y devuelve un enlace `wa.me` de respaldo.
+WAHA is **self-hosted, open-source and free** (Community tier). It runs as a Docker container on *your* server and connects to **your own WhatsApp account** (via WhatsApp Web): you scan the QR code once with your phone. No external platform, no paid subscription.
+
+- The `WAHA_API_KEY` is **not** a third-party key: it is a secret **you make up** to protect the local HTTP API (passed to the container as `WHATSAPP_API_KEY`).
+- No tunneling is needed: the app talks to WAHA over the internal Docker network (`http://waha:3000`).
+- The admin links the number by scanning the **QR** shown in `/admin` (a proxy to WAHA, `default` session).
+- Sending is done **call by call** from the frontend: each participant triggers `POST /api/admin/participants/[id]/send-whatsapp` with a **random 3–5 s delay** between messages.
+- It always uses `session: "default"` and `chatId: "{phone}@c.us"`.
+- On failure it marks `whatsappStatus = FAILED` and returns a `wa.me` fallback link.
 
 ---
 
-## Puesta en marcha local
+## Local development
 
-Requisitos: Node 18.18+ (o Bun) y Docker para WAHA.
+Requirements: Node 18.18+ (or Bun) and Docker for WAHA.
 
 ```bash
-# 1. Dependencias
-npm install        # o: bun install
+# 1. Dependencies
+npm install        # or: bun install
 
-# 2. Variables de entorno
+# 2. Environment variables
 cp .env.example .env
-# edita ADMIN_PASSWORD, APP_URL, WAHA_URL, WAHA_API_KEY
+# edit ADMIN_PASSWORD, APP_URL, WAHA_URL, WAHA_API_KEY
 
-# 3. Base de datos (se crea sola al arrancar, en ./data/amic.db)
+# 3. Database (created automatically on boot, at ./data/amic.db)
 
-# 4. Arrancar WAHA
-docker run --rm -p 3001:3000 -e WHATSAPP_API_KEY=tukey \
+# 4. Run WAHA
+docker run --rm -p 3001:3000 -e WHATSAPP_API_KEY=yourkey \
   -v "$(pwd)/waha-data:/app/.sessions" devlikeapro/waha
 
-# 5. Arrancar la app
+# 5. Run the app
 npm run dev       # http://localhost:3000
 ```
 
-Con `WAHA_URL=http://localhost:3001` en local (para que la app llegue a WAHA desde tu máquina).
+Use `WAHA_URL=http://localhost:3001` locally (so the app can reach WAHA from your machine).
 
 ---
 
-## Despliegue con Docker
+## Docker deployment
 
 ```bash
-# Construir
+# Build
 docker build -t amic-invisible .
 
-# O levantar app + WAHA con docker-compose
-ADMIN_PASSWORD=tupassword WAHA_API_KEY=tukey docker compose up -d
+# Or run app + WAHA with docker-compose
+ADMIN_PASSWORD=yourpassword WAHA_API_KEY=yourkey docker compose up -d
 ```
 
-Servicios:
+Services:
 
-- `app` → Next.js en `:3000` (volumen persistente `./data`).
-- `waha` → WAHA en `:3001` (volumen persistente `./waha-data`).
+- `app` → Next.js on `:3000` (persistent volume `./data`).
+- `waha` → WAHA on `:3001` (persistent volume `./waha-data`).
 
 ---
 
-## Despliegue en Hetzner + Coolify
+## Deploy on Hetzner + Coolify
 
-1. Sube este repo a GitHub/GitLab y créalo en **Coolify** (autodetecta el `Dockerfile`), apuntando el subdominio **amic.xavierarbat.com**.
-2. Configura las variables de entorno (ver `.env.example`):
-   - `ADMIN_PASSWORD` → contraseña del panel.
-   - `APP_URL` → `https://amic.xavierarbat.com` (para los enlaces privados).
-   - `WAHA_URL` → `http://waha:3000` (nombre del servicio interno).
-   - `WAHA_API_KEY` → misma clave que uses en el contenedor WAHA (`WHATSAPP_API_KEY`).
-3. Añade volúmenes persistentes:
+1. Push this repo to GitHub/GitLab and create it in **Coolify** (it auto-detects the `Dockerfile`), pointing at the subdomain **amic.xavierarbat.com**.
+2. Configure the environment variables (see `.env.example`):
+   - `ADMIN_PASSWORD` → admin panel password.
+   - `APP_URL` → `https://amic.xavierarbat.com` (used for private links).
+   - `WAHA_URL` → `http://waha:3000` (internal service name).
+   - `WAHA_API_KEY` → same key you set on the WAHA container (`WHATSAPP_API_KEY`).
+3. Add persistent volumes:
    - `./data:/app/data` (SQLite).
-   - `./waha-data:/app/.sessions` (sesiones de WhatsApp).
-4. Despliega, entra en `/admin`, vincula WhatsApp con el QR y crea tu primer evento.
+   - `./waha-data:/app/.sessions` (WhatsApp sessions).
+4. Deploy, open `/admin`, link WhatsApp with the QR and create your first event.
 
 ---
 
-## Uso del panel `/admin`
+## Using the `/admin` panel
 
-1. **Crear evento**: título, fecha/hora, lugar, presupuesto, normas y (opcional) plantilla de mensaje.
-2. **Añadir participantes**: un participante por línea con formato `Nombre, teléfono` (el teléfono se normaliza solo).
-3. **Exclusiones**: las de teléfono compartido son automáticas; puedes añadir exclusiones manuales extra.
-4. **Fer el sorteig**: ejecuta el motor. El evento pasa a `ACTIVE`.
-5. **Enviar WhatsApp**: envía todos los mensajes en cola (retardo 3–5 s entre ellos) o uno a uno. Cada participante recibe su enlace privado `/r/[token]`.
-6. **Anti-spoiler**: con el toggle activado, ni el admin ve las asignaciones.
+1. **Create event**: title, date/time, location, budget, rules and (optional) message template.
+2. **Add participants**: one per line in the format `Name, phone` (the phone is normalized automatically).
+3. **Exclusions**: shared-phone exclusions are automatic; you can add extra manual exclusions.
+4. **Run the draw**: executes the engine. The event becomes `ACTIVE`.
+5. **Send WhatsApp**: sends all messages in a queue (3–5 s delay between them) or one by one. Each participant receives their private `/r/[token]` link.
+6. **Anti-spoiler**: when enabled, not even the admin sees the assignments.
 
-Cada participante recibe un enlace único. Al abrirlo ve su tarjeta, puede **revelar** su regalo (con confeti) y **descargar el recordatorio** `.ics`.
+Each participant receives a unique link. Opening it shows their card, lets them **reveal** their gift (with confetti) and **download the `.ics`** reminder.
 
 ---
 
-## Variables de entorno
+## Environment variables
 
-| Variable | Descripción | Ejemplo |
+| Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | Ruta del SQLite | `/app/data/amic.db` |
-| `ADMIN_PASSWORD` | Contraseña del panel | `cambia-esta-contrasena` |
-| `APP_URL` | URL pública (enlaces privados) | `https://amic.xavierarbat.com` |
-| `WAHA_URL` | URL interna de WAHA | `http://waha:3000` |
-| `WAHA_API_KEY` | API key de WAHA | `cambia-esta-api-key` |
+| `DATABASE_URL` | SQLite file path | `/app/data/amic.db` |
+| `ADMIN_PASSWORD` | Admin panel password | `change-this-password` |
+| `APP_URL` | Public URL (for private links) | `https://amic.xavierarbat.com` |
+| `WAHA_URL` | Internal WAHA URL | `http://waha:3000` |
+| `WAHA_API_KEY` | WAHA API key (your own secret) | `change-this-api-key` |
 
 ---
 
-## Estructura del proyecto
+## Project structure
 
 ```
 src/
 ├── app/
 │   ├── api/
 │   │   ├── admin/…        # login, events, participants, exclusions, draw, send-whatsapp, waha/qr
-│   │   └── r/[token]/…    # reveal (POST) y ics (GET)
-│   ├── admin/             # panel de administración + login
-│   ├── r/[token]/         # tarjeta de revelación (público)
+│   │   └── r/[token]/…    # reveal (POST) and ics (GET)
+│   ├── admin/             # admin panel + login
+│   ├── r/[token]/         # public reveal card
 │   ├── page.tsx           # landing
-│   └── layout.tsx         # layout raíz + fuentes
+│   └── layout.tsx         # root layout + fonts
 ├── components/
-│   ├── AdminPanel.tsx     # UI del panel (cliente)
-│   └── RevealClient.tsx   # tarjeta 3D de revelación (cliente)
+│   ├── AdminPanel.tsx     # admin UI (client)
+│   ├── LoginForm.tsx      # login form (client)
+│   └── RevealClient.tsx   # 3D reveal card (client)
 ├── lib/
-│   ├── db/                # conexión better-sqlite3 + schema Drizzle + auto-create
-│   ├── draw.ts            # motor de sorteo (MRV + backtracking)
-│   ├── phone.ts           # normalización de teléfonos
-│   ├── whatsapp.ts        # cliente WAHA
-│   ├── ics.ts             # generador de .ics
-│   ├── template.ts        # plantilla del mensaje de WhatsApp
-│   ├── repo.ts            # helpers de acceso a datos
-│   └── auth.ts            # hash de contraseña / cookie
-└── middleware.ts          # protección de /admin y /api/admin
+│   ├── db/                # better-sqlite3 connection + Drizzle schema + auto-create
+│   ├── i18n.ts            # Catalan/Spanish dictionaries + device-language detection
+│   ├── draw.ts            # draw engine (MRV + backtracking)
+│   ├── phone.ts           # phone normalization
+│   ├── whatsapp.ts        # WAHA client
+│   ├── ics.ts             # .ics generator
+│   ├── template.ts        # WhatsApp message template
+│   ├── repo.ts            # data-access helpers
+│   └── auth.ts            # password hash / cookie
+└── middleware.ts          # protects /admin and /api/admin
 ```

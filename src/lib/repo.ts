@@ -30,9 +30,9 @@ export function getParticipantById(id: string) {
 }
 
 /**
- * Regla de telèfon compartit: dos o més participants del mateix esdeveniment
- * amb el mateix telèfon normalitzat generen exclusions bidireccionals (SAME_PHONE).
- * Sempre manté tokens i enviaments de WhatsApp separats.
+ * Shared-phone rule: two or more participants of the same event with the same
+ * normalized phone generate bidirectional exclusions (SAME_PHONE). Tokens and
+ * WhatsApp sends are always kept separate.
  */
 export function syncSamePhoneExclusions(eventId: string): void {
   const now = Date.now();

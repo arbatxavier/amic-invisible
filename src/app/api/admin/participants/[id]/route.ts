@@ -13,7 +13,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const p = getParticipantById(id);
-  if (!p) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
   const updates: Record<string, unknown> = { updatedAt: Date.now() };
@@ -34,7 +34,7 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const p = getParticipantById(id);
-  if (!p) return NextResponse.json({ error: 'No trobat' }, { status: 404 });
+  if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   db.delete(exclusions)
     .where(or(eq(exclusions.giverId, id), eq(exclusions.receiverId, id)))
