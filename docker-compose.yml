@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    container_name: amic-invisible
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: /app/data/amic.db
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-cambia-esta-contrasena}
+      APP_URL: ${APP_URL:-https://amic.xavierarbat.com}
+      WAHA_URL: http://waha:3000
+      WAHA_API_KEY: ${WAHA_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - waha
+
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: amic-waha
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      # Misma clave que usas en WAHA_API_KEY de la app
+      WHATSAPP_API_KEY: ${WAHA_API_KEY:-}
+    volumes:
+      - ./waha-data:/app/.sessions
