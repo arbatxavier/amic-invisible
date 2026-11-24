@@ -15,6 +15,7 @@ interface EventRow {
   location: string | null;
   budget: string | null;
   rules: string | null;
+  rulesEs: string | null;
   status: EventStatus;
   avoidTwoCycles: boolean;
   messageTemplate: string | null;
@@ -739,13 +740,25 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </label>
                     <label className="block">
                       <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.detail.rules')}
+                        {t('admin.detail.rulesCa')}
                       </span>
                       <textarea
                         rows={2}
                         defaultValue={detail.event.rules ?? ''}
                         disabled={isArchived}
                         onBlur={(e) => updateEventField('rules', e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.rulesEs')}
+                      </span>
+                      <textarea
+                        rows={2}
+                        defaultValue={detail.event.rulesEs ?? ''}
+                        disabled={isArchived}
+                        onBlur={(e) => updateEventField('rulesEs', e.target.value)}
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
                       />
                     </label>

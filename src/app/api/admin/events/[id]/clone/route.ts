@@ -30,6 +30,7 @@ export async function POST(
       location: src.location,
       budget: src.budget,
       rules: src.rules,
+      rulesEs: src.rulesEs,
       avoidTwoCycles: src.avoidTwoCycles,
       messageTemplate: src.messageTemplate,
       messageTemplateEs: src.messageTemplateEs,

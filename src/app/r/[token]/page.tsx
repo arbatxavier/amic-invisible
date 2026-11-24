@@ -49,6 +49,7 @@ export default async function RevealPage({ params }: Props) {
       location: event.location,
       budget: event.budget,
       rules: event.rules,
+      rulesEs: event.rulesEs,
     },
   };
 

@@ -15,6 +15,7 @@ interface RevealData {
     location: string | null;
     budget: string | null;
     rules: string | null;
+    rulesEs: string | null;
   };
 }
 
@@ -88,7 +89,7 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
           />
           <InfoRow
             label={`📜 ${t('reveal.rules')}`}
-            value={data.event.rules || t('reveal.rulesUndefined')}
+            value={(locale === 'es' ? data.event.rulesEs : data.event.rules) || t('reveal.rulesUndefined')}
           />
         </div>
         <div className="card-3d mt-8 h-72 w-full">

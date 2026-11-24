@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS events (
   location TEXT,
   budget TEXT,
   rules TEXT,
+  rulesEs TEXT,
   status TEXT NOT NULL DEFAULT 'DRAFT',
   avoidTwoCycles INTEGER NOT NULL DEFAULT 0,
   messageTemplate TEXT,
@@ -63,6 +64,9 @@ function ensureColumns(sqlite: SqliteDatabase) {
     .map((c) => (c as { name: string }).name);
   if (!eventCols.includes('messageTemplateEs')) {
     sqlite.exec('ALTER TABLE events ADD COLUMN messageTemplateEs TEXT');
+  }
+  if (!eventCols.includes('rulesEs')) {
+    sqlite.exec('ALTER TABLE events ADD COLUMN rulesEs TEXT');
   }
 
   const partCols = sqlite

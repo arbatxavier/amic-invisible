@@ -42,7 +42,7 @@ export async function sendMessageToParticipant(
       date: formatDate(event.eventDate),
       location: event.location || '',
       budget: event.budget || '',
-      rules: event.rules || '',
+      rules: (lang === 'es' ? event.rulesEs : event.rules) || '',
       link: `${baseUrl}/r/${p.token}`,
     },
     lang,

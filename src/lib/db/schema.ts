@@ -7,6 +7,7 @@ export const events = sqliteTable('events', {
   location: text('location'),
   budget: text('budget'),
   rules: text('rules'),
+  rulesEs: text('rulesEs'),
   status: text('status').notNull().default('DRAFT'),
   avoidTwoCycles: integer('avoidTwoCycles', { mode: 'boolean' }).notNull().default(false),
   messageTemplate: text('messageTemplate'),

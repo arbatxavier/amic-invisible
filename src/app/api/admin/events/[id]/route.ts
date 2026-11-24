@@ -86,6 +86,8 @@ export async function PATCH(
     updates.budget = typeof body.budget === 'string' ? body.budget : null;
   if (editable && 'rules' in body)
     updates.rules = typeof body.rules === 'string' ? body.rules : null;
+  if (editable && 'rulesEs' in body)
+    updates.rulesEs = typeof body.rulesEs === 'string' ? body.rulesEs : null;
   if (editable && 'messageTemplate' in body)
     updates.messageTemplate =
       typeof body.messageTemplate === 'string' ? body.messageTemplate : null;
