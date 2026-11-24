@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeT, type Locale } from '@/lib/i18n';
 
 type EventStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
@@ -92,7 +92,7 @@ const statusColor: Record<EventStatus, string> = {
 };
 
 export default function AdminPanel({ locale }: { locale: Locale }) {
-  const t = makeT(locale);
+  const t = useMemo(() => makeT(locale), [locale]);
 
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);

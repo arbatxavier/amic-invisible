@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { makeT, type Locale } from '@/lib/i18n';
@@ -43,7 +43,7 @@ function fireConfetti() {
 }
 
 export default function RevealClient({ data, locale }: { data: RevealData; locale: Locale }) {
-  const t = makeT(locale);
+  const t = useMemo(() => makeT(locale), [locale]);
 
   const [revealed, setRevealed] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

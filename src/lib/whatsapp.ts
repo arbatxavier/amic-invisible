@@ -26,7 +26,28 @@ export async function wahaRequest(path: string, init: RequestInit = {}): Promise
   });
 }
 
-/** Ensures the "default" session exists (idempotent). */
+export interface WahaSession {
+  name: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+export async function getSessions(): Promise<WahaSession[]> {
+  const res = await wahaRequest('/api/sessions?all=true');
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => []);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+export async function getDefaultSessionStatus(): Promise<string | null> {
+  const sessions = await getSessions();
+  const def = sessions.find((s) => s?.name === 'default');
+  return def ? String(def.status) : null;
+}
+
+/** Creates the "default" session if missing (idempotent; 422 if it already exists). */
 export async function ensureDefaultSession(): Promise<void> {
   try {
     await wahaRequest('/api/sessions', {
@@ -35,6 +56,17 @@ export async function ensureDefaultSession(): Promise<void> {
     });
   } catch {
     // The session may already exist, or WAHA may not be ready yet.
+  }
+}
+
+/** Starts the "default" session if it is currently stopped. */
+export async function startDefaultSessionIfStopped(): Promise<void> {
+  const status = await getDefaultSessionStatus();
+  if (status === 'STOPPED') {
+    await wahaRequest('/api/sessions/start', {
+      method: 'POST',
+      body: JSON.stringify({ name: 'default' }),
+    });
   }
 }
 

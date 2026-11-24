@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getWahaConfig, ensureDefaultSession } from '@/lib/whatsapp';
+import {
+  ensureDefaultSession,
+  getWahaConfig,
+  startDefaultSessionIfStopped,
+} from '@/lib/whatsapp';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,40 +18,45 @@ export async function GET() {
   }
 
   await ensureDefaultSession();
+  await startDefaultSessionIfStopped();
 
   const base = url.replace(/\/+$/, '');
-  let res: Response;
-  try {
-    res = await fetch(`${base}/api/default/auth/qr`, {
-      headers: {
-        Accept: 'image/png',
-        ...(apiKey ? { 'X-Api-Key': apiKey } : {}),
-      },
-      signal: AbortSignal.timeout(15000),
-    });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'WAHA unavailable' },
-      { status: 502 },
-    );
-  }
+  const headers: Record<string, string> = { Accept: 'image/png' };
+  if (apiKey) headers['X-Api-Key'] = apiKey;
 
-  const contentType = res.headers.get('content-type') || '';
+  // The session transitions STOPPED -> STARTING -> SCAN_QR_CODE; poll briefly.
+  for (let attempt = 0; attempt < 15; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${base}/api/default/auth/qr`, {
+        headers,
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch {
+      await new Promise((r) => setTimeout(r, 1000));
+      continue;
+    }
 
-  if (res.ok && contentType.includes('image')) {
-    const buf = await res.arrayBuffer();
-    return new NextResponse(buf, {
-      headers: { 'Content-Type': contentType, 'Cache-Control': 'no-store' },
-    });
-  }
+    const contentType = res.headers.get('content-type') || '';
 
-  if (res.ok && contentType.includes('json')) {
-    const data = await res.json().catch(() => ({}));
-    return NextResponse.json(data);
+    if (res.ok && contentType.includes('image')) {
+      const buf = await res.arrayBuffer();
+      return new NextResponse(buf, {
+        headers: { 'Content-Type': contentType, 'Cache-Control': 'no-store' },
+      });
+    }
+
+    if (res.ok && contentType.includes('json')) {
+      const data = await res.json().catch(() => ({}));
+      return NextResponse.json(data);
+    }
+
+    // Not ready yet (e.g. 422 while the session is starting); retry.
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   return NextResponse.json(
-    { error: `Could not fetch the QR (status ${res.status}). Open the WAHA dashboard.` },
+    { error: 'Could not fetch the QR. Open the WAHA dashboard.' },
     { status: 502 },
   );
 }
