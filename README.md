@@ -39,8 +39,8 @@ A **fullstack** web app to run a "Secret Santa" (Amic Invisible) draw for family
 
 Three tables (created automatically with `CREATE TABLE IF NOT EXISTS` when the connection starts):
 
-- **`events`**: `id`, `title`, `eventDate`, `location`, `budget`, `rules`, `status` (`DRAFT | ACTIVE | ARCHIVED`), `avoidTwoCycles` (boolean), `messageTemplate`.
-- **`participants`**: `id`, `eventId`, `name`, `phone` (normalized to E.164 without `+`, e.g. `34600112233`, **not unique**), `token` (nanoid 24), `assignedToId` (nullable), `whatsappStatus` (`PENDING | SENT | FAILED`), `whatsappSentAt`, `viewedAt`.
+- **`events`**: `id`, `title`, `eventDate`, `location`, `budget`, `rules`, `status` (`DRAFT | ACTIVE | ARCHIVED`), `avoidTwoCycles` (boolean), `messageTemplate` (Catalan) and `messageTemplateEs` (Spanish).
+- **`participants`**: `id`, `eventId`, `name`, `phone` (normalized to E.164 without `+`, e.g. `34600112233`, **not unique**), `language` (`ca` | `es`), `token` (nanoid 24), `assignedToId` (nullable), `whatsappStatus` (`PENDING | SENT | FAILED`), `whatsappSentAt`, `viewedAt`.
 - **`exclusions`**: `id`, `eventId`, `giverId`, `receiverId`, `reason` (`SAME_PHONE | MANUAL`).
 
 ### Draw engine (`src/lib/draw.ts`)

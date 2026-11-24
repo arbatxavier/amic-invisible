@@ -40,6 +40,7 @@ export async function POST(
         eventId: id,
         name,
         phone: normalizePhone(raw.phone),
+        language: raw.language === 'es' ? 'es' : 'ca',
         token: newToken(),
         assignedToId: null,
         whatsappStatus: 'PENDING',

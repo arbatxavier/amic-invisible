@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS events (
   status TEXT NOT NULL DEFAULT 'DRAFT',
   avoidTwoCycles INTEGER NOT NULL DEFAULT 0,
   messageTemplate TEXT,
+  messageTemplateEs TEXT,
   createdAt INTEGER NOT NULL,
   updatedAt INTEGER NOT NULL
 );
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS participants (
   eventId TEXT NOT NULL,
   name TEXT NOT NULL,
   phone TEXT,
+  language TEXT NOT NULL DEFAULT 'ca',
   token TEXT NOT NULL,
   assignedToId TEXT,
   whatsappStatus TEXT NOT NULL DEFAULT 'PENDING',
@@ -53,6 +55,25 @@ function ensureSchema(sqlite: SqliteDatabase) {
   sqlite.exec(DDL);
 }
 
+// Lightweight migration for databases created before new columns were added.
+function ensureColumns(sqlite: SqliteDatabase) {
+  const eventCols = sqlite
+    .prepare('PRAGMA table_info(events)')
+    .all()
+    .map((c) => (c as { name: string }).name);
+  if (!eventCols.includes('messageTemplateEs')) {
+    sqlite.exec('ALTER TABLE events ADD COLUMN messageTemplateEs TEXT');
+  }
+
+  const partCols = sqlite
+    .prepare('PRAGMA table_info(participants)')
+    .all()
+    .map((c) => (c as { name: string }).name);
+  if (!partCols.includes('language')) {
+    sqlite.exec("ALTER TABLE participants ADD COLUMN language TEXT NOT NULL DEFAULT 'ca'");
+  }
+}
+
 function createConnection(): SqliteDatabase {
   const dbPath = process.env.DATABASE_URL || './data/amic.db';
   if (dbPath !== ':memory:') {
@@ -62,6 +83,7 @@ function createConnection(): SqliteDatabase {
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   ensureSchema(sqlite);
+  ensureColumns(sqlite);
   return sqlite;
 }
 

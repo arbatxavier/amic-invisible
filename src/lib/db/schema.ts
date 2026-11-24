@@ -10,6 +10,7 @@ export const events = sqliteTable('events', {
   status: text('status').notNull().default('DRAFT'),
   avoidTwoCycles: integer('avoidTwoCycles', { mode: 'boolean' }).notNull().default(false),
   messageTemplate: text('messageTemplate'),
+  messageTemplateEs: text('messageTemplateEs'),
   createdAt: integer('createdAt').notNull(),
   updatedAt: integer('updatedAt').notNull(),
 });
@@ -21,6 +22,7 @@ export const participants = sqliteTable(
     eventId: text('eventId').notNull(),
     name: text('name').notNull(),
     phone: text('phone'),
+    language: text('language').notNull().default('ca'),
     token: text('token').notNull(),
     assignedToId: text('assignedToId'),
     whatsappStatus: text('whatsappStatus').notNull().default('PENDING'),

@@ -25,6 +25,7 @@ export async function PATCH(
 
   if (typeof body.name === 'string') updates.name = body.name.trim();
   if ('phone' in body) updates.phone = normalizePhone(body.phone);
+  if ('language' in body) updates.language = body.language === 'es' ? 'es' : 'ca';
 
   db.update(participants).set(updates).where(eq(participants.id, id)).run();
 

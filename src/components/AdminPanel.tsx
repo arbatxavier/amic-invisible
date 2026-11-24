@@ -18,6 +18,7 @@ interface EventRow {
   status: EventStatus;
   avoidTwoCycles: boolean;
   messageTemplate: string | null;
+  messageTemplateEs: string | null;
   createdAt: number;
   updatedAt: number;
   participantCount: number;
@@ -28,6 +29,7 @@ interface ParticipantRow {
   eventId: string;
   name: string;
   phone: string | null;
+  language: string;
   token: string;
   assignedToId: string | null;
   assignedToName: string | null;
@@ -206,7 +208,6 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       budget: fd.get('budget'),
       rules: fd.get('rules'),
       avoidTwoCycles: fd.get('avoidTwoCycles') === 'on',
-      messageTemplate: fd.get('messageTemplate'),
     };
     const res = await fetch('/api/admin/events', {
       method: 'POST',
@@ -538,16 +539,6 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       placeholder={t('admin.newEvent.rulesPlaceholder')}
                     />
                   </label>
-                  <label className="block">
-                    <span className="text-xs font-bold text-burgundy-700">
-                      {t('admin.newEvent.template')}
-                    </span>
-                    <textarea
-                      name="messageTemplate"
-                      rows={3}
-                      className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 font-mono text-xs"
-                    />
-                  </label>
                   <label className="flex items-center gap-2 text-sm font-bold text-burgundy-700">
                     <input name="avoidTwoCycles" type="checkbox" className="h-4 w-4 accent-burgundy-600" />
                     {t('admin.newEvent.avoidTwoCycles')}
@@ -770,6 +761,34 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     {t('admin.detail.avoidTwoCycles')}
                   </label>
 
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.templateCa')}
+                      </span>
+                      <textarea
+                        rows={6}
+                        defaultValue={detail.event.messageTemplate ?? ''}
+                        disabled={isArchived}
+                        onBlur={(e) => updateEventField('messageTemplate', e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 font-mono text-xs disabled:opacity-60"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.templateEs')}
+                      </span>
+                      <textarea
+                        rows={6}
+                        defaultValue={detail.event.messageTemplateEs ?? ''}
+                        disabled={isArchived}
+                        onBlur={(e) => updateEventField('messageTemplateEs', e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 font-mono text-xs disabled:opacity-60"
+                      />
+                    </label>
+                  </div>
+                  <p className="mt-1 text-xs text-burgundy-900/50">{t('admin.detail.templateHint')}</p>
+
                   {!readOnly && (
                     <>
                       <button
@@ -821,6 +840,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                         <tr className="border-b border-gold-200 text-left text-xs text-burgundy-900/50">
                           <th className="py-2 pr-2">{t('admin.participants.colName')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colPhone')}</th>
+                          <th className="py-2 pr-2">{t('admin.participants.colLang')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colGivesTo')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colWhatsapp')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colViewed')}</th>
@@ -845,6 +865,17 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                                 onBlur={(e) => updateParticipant(p.id, { phone: e.target.value })}
                                 className="w-28 rounded border border-transparent bg-transparent px-1 py-1 hover:border-burgundy-200 disabled:cursor-default"
                               />
+                            </td>
+                            <td className="py-2 pr-2">
+                              <select
+                                value={p.language}
+                                disabled={readOnly}
+                                onChange={(e) => updateParticipant(p.id, { language: e.target.value })}
+                                className="rounded border border-transparent bg-transparent px-1 py-1 text-sm hover:border-burgundy-200 disabled:cursor-default"
+                              >
+                                <option value="ca">CA</option>
+                                <option value="es">ES</option>
+                              </select>
                             </td>
                             <td className="py-2 pr-2">
                               {p.assignedToName ? (

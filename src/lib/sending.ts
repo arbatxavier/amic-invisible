@@ -30,16 +30,23 @@ export async function sendMessageToParticipant(
   if (!p.phone)
     return { id, ok: false, status: 'FAILED', error: 'This participant has no phone number' };
 
-  const message = renderMessage(event.messageTemplate, {
-    name: p.name,
-    friend: assigned.name,
-    title: event.title,
-    date: formatDate(event.eventDate),
-    location: event.location || '',
-    budget: event.budget || '',
-    rules: event.rules || '',
-    link: `${baseUrl}/r/${p.token}`,
-  });
+  const lang = p.language === 'es' ? 'es' : 'ca';
+  const template = lang === 'es' ? event.messageTemplateEs : event.messageTemplate;
+
+  const message = renderMessage(
+    template,
+    {
+      name: p.name,
+      friend: assigned.name,
+      title: event.title,
+      date: formatDate(event.eventDate),
+      location: event.location || '',
+      budget: event.budget || '',
+      rules: event.rules || '',
+      link: `${baseUrl}/r/${p.token}`,
+    },
+    lang,
+  );
 
   const now = Date.now();
 

@@ -27,6 +27,7 @@ export async function GET(
     eventId: p.eventId,
     name: p.name,
     phone: p.phone,
+    language: p.language,
     token: p.token,
     assignedToId: p.assignedToId,
     assignedToName: p.assignedToId ? (nameMap.get(p.assignedToId) ?? null) : null,
@@ -85,9 +86,12 @@ export async function PATCH(
     updates.budget = typeof body.budget === 'string' ? body.budget : null;
   if (editable && 'rules' in body)
     updates.rules = typeof body.rules === 'string' ? body.rules : null;
-  if (draftOnly && 'messageTemplate' in body)
+  if (editable && 'messageTemplate' in body)
     updates.messageTemplate =
       typeof body.messageTemplate === 'string' ? body.messageTemplate : null;
+  if (editable && 'messageTemplateEs' in body)
+    updates.messageTemplateEs =
+      typeof body.messageTemplateEs === 'string' ? body.messageTemplateEs : null;
   if (draftOnly && 'avoidTwoCycles' in body) updates.avoidTwoCycles = !!body.avoidTwoCycles;
 
   if (Object.keys(updates).length > 1) {
