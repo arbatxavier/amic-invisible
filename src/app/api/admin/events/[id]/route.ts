@@ -18,37 +18,26 @@ export async function GET(
   const event = getEventById(id);
   if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  // Modo anti-spoiler: por defecto oculta assignedTo al admin.
-  const spoiler = new URL(req.url).searchParams.get('spoiler') !== 'false';
-
   const parts = getParticipantsByEvent(id);
   const nameMap = new Map(parts.map((p) => [p.id, p.name]));
   const excl = getExclusionsByEvent(id);
 
-  const participantsOut = parts.map((p) => {
-    const base = {
-      id: p.id,
-      eventId: p.eventId,
-      name: p.name,
-      phone: p.phone,
-      token: p.token,
-      whatsappStatus: p.whatsappStatus,
-      whatsappSentAt: p.whatsappSentAt,
-      viewedAt: p.viewedAt,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-    };
-    if (spoiler) {
-      return { ...base, assignedToId: null, assignedToName: null };
-    }
-    return {
-      ...base,
-      assignedToId: p.assignedToId,
-      assignedToName: p.assignedToId ? (nameMap.get(p.assignedToId) ?? null) : null,
-    };
-  });
+  const participantsOut = parts.map((p) => ({
+    id: p.id,
+    eventId: p.eventId,
+    name: p.name,
+    phone: p.phone,
+    token: p.token,
+    assignedToId: p.assignedToId,
+    assignedToName: p.assignedToId ? (nameMap.get(p.assignedToId) ?? null) : null,
+    whatsappStatus: p.whatsappStatus,
+    whatsappSentAt: p.whatsappSentAt,
+    viewedAt: p.viewedAt,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  }));
 
-  return NextResponse.json({ event, participants: participantsOut, exclusions: excl, spoiler });
+  return NextResponse.json({ event, participants: participantsOut, exclusions: excl });
 }
 
 export async function PATCH(
@@ -74,37 +63,36 @@ export async function PATCH(
     if (!allowed.includes(body.status)) {
       return NextResponse.json({ error: 'Invalid status transition' }, { status: 400 });
     }
+    db.update(events)
+      .set({ status: body.status, updatedAt: now })
+      .where(eq(events.id, id))
+      .run();
+    return NextResponse.json({ event: getEventById(id) });
   }
 
-  // A non-draft event is read-only: only a forward status change is allowed.
-  if (event.status !== 'DRAFT') {
-    if (typeof body.status === 'string') {
-      db.update(events)
-        .set({ status: body.status, updatedAt: now })
-        .where(eq(events.id, id))
-        .run();
-      return NextResponse.json({ event: getEventById(id) });
-    }
-    return NextResponse.json({ error: 'This event is read-only' }, { status: 400 });
-  }
-
+  // Field edits. eventDate/location/budget/rules are editable in DRAFT and ACTIVE.
+  // title/messageTemplate/avoidTwoCycles are only editable while DRAFT.
   const updates: Record<string, unknown> = { updatedAt: now };
+  const editable = event.status !== 'ARCHIVED';
+  const draftOnly = event.status === 'DRAFT';
 
-  if (typeof body.title === 'string') updates.title = body.title.trim();
-  if ('eventDate' in body)
+  if (draftOnly && typeof body.title === 'string') updates.title = body.title.trim();
+  if (editable && 'eventDate' in body)
     updates.eventDate = typeof body.eventDate === 'number' ? body.eventDate : null;
-  if ('location' in body)
+  if (editable && 'location' in body)
     updates.location = typeof body.location === 'string' ? body.location : null;
-  if ('budget' in body)
+  if (editable && 'budget' in body)
     updates.budget = typeof body.budget === 'string' ? body.budget : null;
-  if ('rules' in body)
+  if (editable && 'rules' in body)
     updates.rules = typeof body.rules === 'string' ? body.rules : null;
-  if ('messageTemplate' in body)
+  if (draftOnly && 'messageTemplate' in body)
     updates.messageTemplate =
       typeof body.messageTemplate === 'string' ? body.messageTemplate : null;
-  if ('avoidTwoCycles' in body) updates.avoidTwoCycles = !!body.avoidTwoCycles;
+  if (draftOnly && 'avoidTwoCycles' in body) updates.avoidTwoCycles = !!body.avoidTwoCycles;
 
-  db.update(events).set(updates).where(eq(events.id, id)).run();
+  if (Object.keys(updates).length > 1) {
+    db.update(events).set(updates).where(eq(events.id, id)).run();
+  }
 
   return NextResponse.json({ event: getEventById(id) });
 }

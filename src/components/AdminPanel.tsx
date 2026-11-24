@@ -64,8 +64,6 @@ type ModalState =
   | { kind: 'link'; url: string }
   | null;
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 const drawErrorKeys: Record<string, string> = {
   NOT_ENOUGH: 'admin.errors.drawNotEnough',
   EMPTY_DOMAIN: 'admin.errors.drawEmptyDomain',
@@ -85,6 +83,15 @@ function dateToTimestamp(v: string): number | null {
   const [y, m, d] = v.split('-').map(Number);
   if (!y || !m || !d) return null;
   return new Date(y, m - 1, d).getTime();
+}
+
+function toDateInput(ms: number | null): string {
+  if (!ms) return '';
+  const d = new Date(ms);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 const waColor: Record<WhatsappStatus, string> = {
@@ -108,7 +115,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<EventDetail | null>(null);
-  const [antiSpoiler, setAntiSpoiler] = useState(true);
+  const [revealedAssignments, setRevealedAssignments] = useState<Set<string>>(new Set());
 
   const [waha, setWaha] = useState<{
     configured: boolean;
@@ -118,7 +125,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
   } | null>(null);
   const [qrNonce, setQrNonce] = useState(0);
 
-  const [sending, setSending] = useState<{ name: string; index: number; total: number } | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
 
   const [modal, setModal] = useState<ModalState>(null);
 
@@ -139,10 +146,8 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     }
   }, [t]);
 
-  const loadDetail = useCallback(async (id: string, spoiler: boolean) => {
-    const res = await fetch(`/api/admin/events/${id}?spoiler=${spoiler}`, {
-      cache: 'no-store',
-    });
+  const loadDetail = useCallback(async (id: string) => {
+    const res = await fetch(`/api/admin/events/${id}`, { cache: 'no-store' });
     const json = await res.json();
     setDetail(json);
   }, []);
@@ -180,8 +185,8 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
   }, [loadEvents, loadWaha]);
 
   useEffect(() => {
-    if (selectedId) loadDetail(selectedId, antiSpoiler);
-  }, [selectedId, antiSpoiler, loadDetail]);
+    if (selectedId) loadDetail(selectedId);
+  }, [selectedId, loadDetail]);
 
   async function handleConfirm() {
     if (modal?.kind !== 'confirm') return;
@@ -239,7 +244,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       setModal({ kind: 'info', title: t('admin.modal.drawErrorTitle'), message: msg });
       return;
     }
-    await loadDetail(selectedId, antiSpoiler);
+    await loadDetail(selectedId);
     await loadEvents();
   }
 
@@ -278,7 +283,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
           body: JSON.stringify({ status: 'ARCHIVED' }),
         });
         await loadEvents();
-        if (selectedId === id) await loadDetail(id, antiSpoiler);
+        if (selectedId === id) await loadDetail(id);
       },
     });
   }
@@ -290,7 +295,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [field]: value }),
     });
-    await loadDetail(selectedId, antiSpoiler);
+    await loadDetail(selectedId);
     await loadEvents();
   }
 
@@ -320,14 +325,14 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       });
       return;
     }
-    await loadDetail(selectedId, antiSpoiler);
+    await loadDetail(selectedId);
     await loadEvents();
   }
 
   async function deleteParticipant(id: string) {
     await fetch(`/api/admin/participants/${id}`, { method: 'DELETE' });
     if (selectedId) {
-      await loadDetail(selectedId, antiSpoiler);
+      await loadDetail(selectedId);
       await loadEvents();
     }
   }
@@ -338,7 +343,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (selectedId) await loadDetail(selectedId, antiSpoiler);
+    if (selectedId) await loadDetail(selectedId);
   }
 
   async function addExclusion(giverId: string, receiverId: string) {
@@ -348,37 +353,50 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ giverId, receiverId }),
     });
-    await loadDetail(selectedId, antiSpoiler);
+    await loadDetail(selectedId);
   }
 
   async function deleteExclusion(id: string) {
     await fetch(`/api/admin/exclusions/${id}`, { method: 'DELETE' });
-    if (selectedId) await loadDetail(selectedId, antiSpoiler);
+    if (selectedId) await loadDetail(selectedId);
   }
 
-  async function sendQueue() {
-    if (!detail) return;
-    const targets = detail.participants.filter((p) => p.phone);
-    for (let i = 0; i < targets.length; i++) {
-      const p = targets[i];
-      setSending({ name: p.name, index: i + 1, total: targets.length });
-      try {
-        const res = await fetch(`/api/admin/participants/${p.id}/send-whatsapp`, {
-          method: 'POST',
+  async function sendAll() {
+    if (!selectedId) return;
+    const id = selectedId;
+    setSendingAll(true);
+    try {
+      const res = await fetch(`/api/admin/events/${id}/send-all`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) {
+        setModal({
+          kind: 'info',
+          title: t('admin.modal.sendErrorTitle'),
+          message: json.error ?? t('admin.errors.sendFail'),
         });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok && json.fallback) {
-          window.open(json.fallback, '_blank');
-        }
-      } catch {
-        // continue with the next one
+        return;
       }
-      if (i < targets.length - 1) {
-        await sleep(3000 + Math.random() * 2000);
+      for (const f of json.failed ?? []) {
+        if (f.fallback) window.open(f.fallback, '_blank');
       }
+      setModal({
+        kind: 'info',
+        title: t('admin.modal.sendAllTitle'),
+        message: t('admin.send.result', {
+          sent: json.sent ?? 0,
+          failed: (json.failed ?? []).length,
+        }),
+      });
+    } catch {
+      setModal({
+        kind: 'info',
+        title: t('admin.modal.sendErrorTitle'),
+        message: t('admin.errors.sendFail'),
+      });
+    } finally {
+      setSendingAll(false);
+      await loadDetail(id);
     }
-    setSending(null);
-    if (selectedId) await loadDetail(selectedId, antiSpoiler);
   }
 
   async function sendOne(id: string) {
@@ -394,12 +412,21 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       setModal({ kind: 'info', title: t('admin.modal.sendErrorTitle'), message: t('admin.errors.sendFail') });
       return;
     }
-    if (selectedId) await loadDetail(selectedId, antiSpoiler);
+    if (selectedId) await loadDetail(selectedId);
   }
 
   function openLink(token: string) {
     const url = `${window.location.origin}/r/${token}`;
     setModal({ kind: 'link', url });
+  }
+
+  function toggleReveal(id: string) {
+    setRevealedAssignments((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function logout() {
@@ -432,15 +459,6 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
             <p className="text-xs text-burgundy-900/50">{t('admin.subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm font-bold text-burgundy-700">
-              <input
-                type="checkbox"
-                checked={antiSpoiler}
-                onChange={(e) => setAntiSpoiler(e.target.checked)}
-                className="h-4 w-4 accent-burgundy-600"
-              />
-              {t('admin.antiSpoiler')}
-            </label>
             <button
               onClick={logout}
               className="rounded-full border border-burgundy-300 px-4 py-1.5 text-sm font-bold text-burgundy-700 transition hover:bg-burgundy-50"
@@ -693,14 +711,26 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </p>
                   )}
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.date')}
+                      </span>
+                      <input
+                        type="date"
+                        defaultValue={toDateInput(detail.event.eventDate)}
+                        disabled={isArchived}
+                        onBlur={(e) => updateEventField('eventDate', dateToTimestamp(e.target.value))}
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
+                      />
+                    </label>
                     <label className="block">
                       <span className="text-xs font-bold text-burgundy-700">
                         {t('admin.detail.location')}
                       </span>
                       <input
                         defaultValue={detail.event.location ?? ''}
-                        disabled={readOnly}
+                        disabled={isArchived}
                         onBlur={(e) => updateEventField('location', e.target.value)}
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
                       />
@@ -711,22 +741,34 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       </span>
                       <input
                         defaultValue={detail.event.budget ?? ''}
-                        disabled={readOnly}
+                        disabled={isArchived}
                         onBlur={(e) => updateEventField('budget', e.target.value)}
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
                       />
                     </label>
-                    <label className="flex items-end gap-2 pb-2 text-sm font-bold text-burgundy-700">
-                      <input
-                        type="checkbox"
-                        defaultChecked={detail.event.avoidTwoCycles}
-                        disabled={readOnly}
-                        onChange={(e) => updateEventField('avoidTwoCycles', e.target.checked)}
-                        className="h-4 w-4 accent-burgundy-600"
+                    <label className="block">
+                      <span className="text-xs font-bold text-burgundy-700">
+                        {t('admin.detail.rules')}
+                      </span>
+                      <textarea
+                        rows={2}
+                        defaultValue={detail.event.rules ?? ''}
+                        disabled={isArchived}
+                        onBlur={(e) => updateEventField('rules', e.target.value)}
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
                       />
-                      {t('admin.detail.avoidTwoCycles')}
                     </label>
                   </div>
+                  <label className="mt-3 flex items-center gap-2 text-sm font-bold text-burgundy-700">
+                    <input
+                      type="checkbox"
+                      defaultChecked={detail.event.avoidTwoCycles}
+                      disabled={readOnly}
+                      onChange={(e) => updateEventField('avoidTwoCycles', e.target.checked)}
+                      className="h-4 w-4 accent-burgundy-600"
+                    />
+                    {t('admin.detail.avoidTwoCycles')}
+                  </label>
 
                   {!readOnly && (
                     <>
@@ -779,7 +821,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                         <tr className="border-b border-gold-200 text-left text-xs text-burgundy-900/50">
                           <th className="py-2 pr-2">{t('admin.participants.colName')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colPhone')}</th>
-                          {!antiSpoiler && <th className="py-2 pr-2">{t('admin.participants.colGivesTo')}</th>}
+                          <th className="py-2 pr-2">{t('admin.participants.colGivesTo')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colWhatsapp')}</th>
                           <th className="py-2 pr-2">{t('admin.participants.colViewed')}</th>
                           <th className="py-2">{t('admin.participants.colActions')}</th>
@@ -804,11 +846,19 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                                 className="w-28 rounded border border-transparent bg-transparent px-1 py-1 hover:border-burgundy-200 disabled:cursor-default"
                               />
                             </td>
-                            {!antiSpoiler && (
-                              <td className="py-2 pr-2 font-bold text-forest-700">
-                                {p.assignedToName ?? '—'}
-                              </td>
-                            )}
+                            <td className="py-2 pr-2">
+                              {p.assignedToName ? (
+                                <button
+                                  onClick={() => toggleReveal(p.id)}
+                                  title={t('admin.participants.revealHint')}
+                                  className="font-bold text-forest-700 hover:underline"
+                                >
+                                  {revealedAssignments.has(p.id) ? p.assignedToName : '****'}
+                                </button>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
                             <td className="py-2 pr-2">
                               <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${waColor[p.whatsappStatus]}`}>
                                 {p.whatsappStatus}
@@ -850,19 +900,12 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                   {isActive && (
                     <div className="mt-4">
                       <button
-                        onClick={sendQueue}
-                        disabled={!!sending || detail.participants.filter((p) => p.phone).length === 0}
+                        onClick={sendAll}
+                        disabled={sendingAll || detail.participants.filter((p) => p.phone && p.whatsappStatus !== 'SENT').length === 0}
                         className="rounded-full bg-gold-500 px-5 py-2 text-sm font-bold text-burgundy-900 hover:bg-gold-400 disabled:opacity-50"
                       >
-                        {sending
-                          ? t('admin.send.sending', {
-                              index: sending.index,
-                              total: sending.total,
-                              name: sending.name,
-                            })
-                          : t('admin.send.queue')}
+                        {sendingAll ? t('admin.send.sendingAll') : t('admin.send.sendAll')}
                       </button>
-                      <p className="mt-1 text-xs text-burgundy-900/50">{t('admin.send.hint')}</p>
                     </div>
                   )}
                 </div>

@@ -56,7 +56,6 @@ const messages = {
     },
     admin: {
       subtitle: "Panell d'administració",
-      antiSpoiler: 'Anti-spoiler',
       logout: 'Sortir',
       archive: 'Arxivar',
       modal: {
@@ -74,6 +73,7 @@ const messages = {
         drawErrorTitle: 'Error al sortejar',
         sendErrorTitle: 'Error en enviar',
         addErrorTitle: 'Error en afegir',
+        sendAllTitle: 'Enviament massiu',
       },
       newEvent: {
         title: 'Nou esdeveniment',
@@ -116,8 +116,10 @@ const messages = {
       },
       detail: {
         back: '← Tornar',
+        date: 'Data',
         location: 'Lloc',
         budget: 'Pressupost',
+        rules: 'Normes',
         avoidTwoCycles: 'Evitar cicles de 2',
         draw: '🎲 Fer el sorteig',
         needParticipants: 'Calen almenys 2 participants per sortejar.',
@@ -137,11 +139,12 @@ const messages = {
         colActions: 'Accions',
         actionLink: 'Enllaç',
         actionSend: 'Enviar',
+        revealHint: 'Fes clic per revelar',
       },
       send: {
-        queue: 'Enviar a tots per WhatsApp (cua)',
-        sending: 'Enviant {index}/{total} ({name})…',
-        hint: "S'envia un a un amb un retard aleatori de 3–5 s. Si falla, s'obre el botó wa.me.",
+        sendAll: 'Enviar a tothom',
+        sendingAll: 'Enviant…',
+        result: 'Enviats: {sent}, fallats: {failed}',
       },
       exclusions: {
         title: 'Exclusions manuals',
@@ -227,7 +230,6 @@ const messages = {
     },
     admin: {
       subtitle: 'Panel de administración',
-      antiSpoiler: 'Anti-spoiler',
       logout: 'Salir',
       archive: 'Archivar',
       modal: {
@@ -245,6 +247,7 @@ const messages = {
         drawErrorTitle: 'Error al sortear',
         sendErrorTitle: 'Error al enviar',
         addErrorTitle: 'Error al añadir',
+        sendAllTitle: 'Envío masivo',
       },
       newEvent: {
         title: 'Nuevo evento',
@@ -287,8 +290,10 @@ const messages = {
       },
       detail: {
         back: '← Volver',
+        date: 'Fecha',
         location: 'Lugar',
         budget: 'Presupuesto',
+        rules: 'Normas',
         avoidTwoCycles: 'Evitar ciclos de 2',
         draw: '🎲 Hacer el sorteo',
         needParticipants: 'Se necesitan al menos 2 participantes para sortear.',
@@ -308,11 +313,12 @@ const messages = {
         colActions: 'Acciones',
         actionLink: 'Enlace',
         actionSend: 'Enviar',
+        revealHint: 'Haz clic para revelar',
       },
       send: {
-        queue: 'Enviar a todos por WhatsApp (cola)',
-        sending: 'Enviando {index}/{total} ({name})…',
-        hint: 'Se envía uno a uno con un retardo aleatorio de 3–5 s. Si falla, se abre el botón wa.me.',
+        sendAll: 'Enviar a todos',
+        sendingAll: 'Enviando…',
+        result: 'Enviados: {sent}, fallados: {failed}',
       },
       exclusions: {
         title: 'Exclusiones manuales',

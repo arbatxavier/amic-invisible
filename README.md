@@ -12,7 +12,7 @@ A **fullstack** web app to run a "Secret Santa" (Amic Invisible) draw for family
 - **Shared-phone rule**: if two people in the same event share a phone number (e.g. mother and daughter), bidirectional exclusions (`SAME_PHONE`) are created automatically so they never draw each other.
 - **Anti-spoiler**: the public `/r/[token]` page **never** returns or renders who the person is drawing for until they tap "Reveal". The name is only obtained (and marked as viewed) via `POST /api/r/[token]/reveal`.
 - **Admin panel** `/admin` protected by a password with an HTTP-only cookie.
-- **WhatsApp** integrated with [WAHA](https://waha.devlike.pro/) (`default` session), with a send queue driven from the frontend and a `wa.me` button fallback.
+- **WhatsApp** integrated with [WAHA](https://waha.devlike.pro/) (`default` session), with a single "send all" button and a `wa.me` fallback.
 - **Festive and mobile-first**: Framer Motion, canvas-confetti, a 3D card, burgundy / forest green / gold palette.
 - **i18n**: the UI automatically switches between **Catalan** and **Spanish** based on the device language.
 
@@ -67,7 +67,7 @@ WAHA is **self-hosted, open-source and free** (Community tier). It runs as a Doc
 - The `WAHA_API_KEY` is **not** a third-party key: it is a secret **you make up** to protect the local HTTP API (passed to the container as `WHATSAPP_API_KEY`).
 - No tunneling is needed: the app talks to WAHA over the internal Docker network (`http://waha:3000`).
 - The admin links the number by scanning the **QR** shown in `/admin` (a proxy to WAHA, `default` session).
-- Sending is done **call by call** from the frontend: each participant triggers `POST /api/admin/participants/[id]/send-whatsapp` with a **random 3–5 s delay** between messages.
+- Sending is done from a single **"send all"** endpoint: `POST /api/admin/events/[id]/send-all` sends the message to every participant that has not been sent yet (there is also a per-participant `POST /api/admin/participants/[id]/send-whatsapp`).
 - It always uses `session: "default"` and `chatId: "{phone}@c.us"`.
 - On failure it marks `whatsappStatus = FAILED` and returns a `wa.me` fallback link.
 
@@ -137,8 +137,8 @@ Services:
 2. **Add participants**: one per line in the format `Name, phone` (the phone is normalized automatically).
 3. **Exclusions**: shared-phone exclusions are automatic; you can add extra manual exclusions.
 4. **Run the draw**: executes the engine. The event becomes `ACTIVE`.
-5. **Send WhatsApp**: sends all messages in a queue (3–5 s delay between them) or one by one. Each participant receives their private `/r/[token]` link.
-6. **Anti-spoiler**: when enabled, not even the admin sees the assignments.
+5. **Send WhatsApp**: a single "send all" button sends the message to everyone who hasn't received it yet (or send one by one). Each participant receives their private `/r/[token]` link.
+6. **Anti-spoiler**: the "Regala a" column always shows `****`; click a cell to reveal who that participant draws.
 
 Each participant receives a unique link. Opening it shows their card and lets them **reveal** their gift (with confetti) by tapping the mystery card.
 
