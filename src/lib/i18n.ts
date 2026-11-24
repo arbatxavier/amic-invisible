@@ -84,6 +84,8 @@ const messages = {
         connected: 'Connectat.',
         refresh: 'Refrescar QR',
         hint: 'Escaneja amb WhatsApp per vincular el número. Sessió: default',
+        linked: 'Vinculat: {phone}',
+        unlink: 'Desvincular',
       },
       detail: {
         back: '← Tornar',
@@ -224,6 +226,8 @@ const messages = {
         connected: 'Conectado.',
         refresh: 'Refrescar QR',
         hint: 'Escanea con WhatsApp para vincular el número. Sesión: default',
+        linked: 'Vinculado: {phone}',
+        unlink: 'Desvincular',
       },
       detail: {
         back: '← Volver',

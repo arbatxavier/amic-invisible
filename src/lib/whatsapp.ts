@@ -70,6 +70,31 @@ export async function startDefaultSessionIfStopped(): Promise<void> {
   }
 }
 
+export interface WahaMe {
+  id?: string;
+  pushName?: string;
+  [key: string]: unknown;
+}
+
+/** Returns the linked account info (id like 34600112233@c.us, pushName, ...). */
+export async function getMe(): Promise<WahaMe | null> {
+  try {
+    const res = await wahaRequest('/api/sessions/default/me');
+    if (!res.ok) return null;
+    return (await res.json().catch(() => null)) as WahaMe | null;
+  } catch {
+    return null;
+  }
+}
+
+/** Logs the "default" session out (unlinks the WhatsApp account). */
+export async function logoutDefaultSession(): Promise<void> {
+  await wahaRequest('/api/sessions/logout', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'default' }),
+  });
+}
+
 /** Sends a text message always using the "default" session and JID {phone}@c.us */
 export async function sendWhatsAppText(phone: string, text: string): Promise<void> {
   const jid = `${phone}@c.us`;

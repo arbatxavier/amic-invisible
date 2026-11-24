@@ -102,7 +102,12 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [antiSpoiler, setAntiSpoiler] = useState(true);
 
-  const [waha, setWaha] = useState<{ configured: boolean; info?: string; error?: string } | null>(null);
+  const [waha, setWaha] = useState<{
+    configured: boolean;
+    status?: string | null;
+    me?: { phone: string; name: string | null } | null;
+    error?: string;
+  } | null>(null);
   const [qrNonce, setQrNonce] = useState(0);
 
   const [sending, setSending] = useState<{ name: string; index: number; total: number } | null>(null);
@@ -136,19 +141,24 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
         setWaha({ configured: false });
         return;
       }
-      let info = '';
-      const sessions = Array.isArray(json.sessions)
-        ? json.sessions
-        : Array.isArray(json.sessions?.data)
-          ? json.sessions.data
-          : [];
-      const def = sessions.find((s: { name?: string }) => s.name === 'default');
-      info = def?.status ? `default: ${def.status}` : json.error ?? '';
-      setWaha({ configured: true, info, error: json.error });
+      setWaha({
+        configured: true,
+        status: json.status ?? null,
+        me: json.me ?? null,
+        error: json.error,
+      });
     } catch (e) {
-      setWaha({ configured: true, error: e instanceof Error ? e.message : 'WAHA not available' });
+      setWaha({
+        configured: true,
+        error: e instanceof Error ? e.message : 'WAHA not available',
+      });
     }
   }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => loadWaha(), 5000);
+    return () => clearInterval(id);
+  }, [loadWaha]);
 
   useEffect(() => {
     loadEvents();
@@ -343,6 +353,12 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     window.location.href = '/admin/login';
   }
 
+  async function unlinkWaha() {
+    await fetch('/api/admin/waha/logout', { method: 'POST' });
+    setQrNonce((n) => n + 1);
+    await loadWaha();
+  }
+
   return (
     <main className="festive-bg min-h-screen">
       <header className="sticky top-0 z-20 border-b border-gold-200 bg-cream/90 backdrop-blur">
@@ -520,13 +536,36 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                 <h2 className="font-display text-lg font-bold text-forest-700">
                   {t('admin.waha.title')}
                 </h2>
-                <p className="mt-1 text-sm text-burgundy-900/60">
-                  {waha?.configured === false
-                    ? t('admin.waha.notConfigured')
-                    : waha?.info || waha?.error || t('admin.waha.connected')}
-                </p>
-                {waha?.configured !== false && (
+
+                {waha?.configured === false ? (
+                  <p className="mt-1 text-sm text-burgundy-900/60">
+                    {t('admin.waha.notConfigured')}
+                  </p>
+                ) : waha?.status === 'WORKING' && waha.me ? (
                   <div className="mt-3">
+                    <div className="flex items-center gap-3 rounded-xl bg-forest-50 px-4 py-3">
+                      <span className="text-2xl">✅</span>
+                      <div>
+                        <p className="font-bold text-forest-700">
+                          {t('admin.waha.linked', { phone: waha.me.phone })}
+                        </p>
+                        {waha.me.name && (
+                          <p className="text-sm text-forest-600">{waha.me.name}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={unlinkWaha}
+                      className="mt-3 w-full rounded-full border border-red-300 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
+                    >
+                      {t('admin.waha.unlink')}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    {waha?.error && (
+                      <p className="mb-2 text-center text-xs text-red-600">{waha.error}</p>
+                    )}
                     <img
                       key={qrNonce}
                       src={`/api/admin/waha/qr?t=${qrNonce}`}

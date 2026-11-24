@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getWahaConfig, wahaRequest } from '@/lib/whatsapp';
+import { getMe, getSessions, getWahaConfig } from '@/lib/whatsapp';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,16 +10,28 @@ export async function GET() {
   }
 
   try {
-    const res = await wahaRequest('/api/sessions?all=true');
-    if (!res.ok) {
-      return NextResponse.json({ configured: true, error: `status ${res.status}` });
+    const sessions = await getSessions();
+    const def = sessions.find((s) => s?.name === 'default');
+    const status = def ? String(def.status) : null;
+
+    let me: { phone: string; name: string | null } | null = null;
+    if (status === 'WORKING') {
+      const info = await getMe();
+      if (info?.id) {
+        me = {
+          phone: info.id.replace(/@c\.us$/, ''),
+          name: info.pushName || null,
+        };
+      }
     }
-    const data = await res.json();
-    return NextResponse.json({ configured: true, sessions: data });
+
+    return NextResponse.json({ configured: true, status, me, sessions });
   } catch (err) {
     return NextResponse.json({
       configured: true,
-      error: err instanceof Error ? err.message : 'WAHA no disponible',
+      status: null,
+      me: null,
+      error: err instanceof Error ? err.message : 'WAHA unavailable',
     });
   }
 }
