@@ -161,7 +161,8 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
 
   async function createEvent(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const payload = {
       title: fd.get('title'),
       eventDate: toTimestamp(String(fd.get('eventDate') ?? '')),
@@ -181,7 +182,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       setError(json.error ?? t('admin.errors.createEvent'));
       return;
     }
-    e.currentTarget.reset();
+    form.reset();
     await loadEvents();
   }
 
