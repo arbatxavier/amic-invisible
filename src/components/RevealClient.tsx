@@ -82,12 +82,15 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
             label={`📍 ${t('reveal.location')}`}
             value={data.event.location || t('reveal.locationUndefined')}
           />
-          {data.event.budget && (
-            <InfoRow label={`💰 ${t('reveal.budget')}`} value={data.event.budget} />
-          )}
-          {data.event.rules && <InfoRow label={`📜 ${t('reveal.rules')}`} value={data.event.rules} />}
+          <InfoRow
+            label={`💰 ${t('reveal.budget')}`}
+            value={data.event.budget || t('reveal.budgetUndefined')}
+          />
+          <InfoRow
+            label={`📜 ${t('reveal.rules')}`}
+            value={data.event.rules || t('reveal.rulesUndefined')}
+          />
         </div>
-
         <div className="card-3d mt-8 h-72 w-full">
           <div className="preserve-3d relative h-full w-full">
             <motion.div
