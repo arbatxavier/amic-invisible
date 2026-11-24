@@ -869,7 +869,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                             <td className="py-2 pr-2">
                               <select
                                 value={p.language}
-                                disabled={readOnly}
+                                disabled={isArchived}
                                 onChange={(e) => updateParticipant(p.id, { language: e.target.value })}
                                 className="rounded border border-transparent bg-transparent px-1 py-1 text-sm hover:border-burgundy-200 disabled:cursor-default"
                               >
