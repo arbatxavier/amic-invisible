@@ -74,23 +74,17 @@ const drawErrorKeys: Record<string, string> = {
 
 function fmtDate(ms: number | null): string {
   if (!ms) return '';
-  try {
-    return new Intl.DateTimeFormat('ca-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(ms));
-  } catch {
-    return new Date(ms).toLocaleString();
-  }
+  const d = new Date(ms);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-function toTimestamp(v: string): number | null {
+function dateToTimestamp(v: string): number | null {
   if (!v) return null;
-  const t = new Date(v).getTime();
-  return Number.isNaN(t) ? null : t;
+  const [y, m, d] = v.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d).getTime();
 }
 
 const waColor: Record<WhatsappStatus, string> = {
@@ -202,7 +196,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     const fd = new FormData(form);
     const payload = {
       title: fd.get('title'),
-      eventDate: toTimestamp(String(fd.get('eventDate') ?? '')),
+      eventDate: dateToTimestamp(String(fd.get('eventDate') ?? '')),
       location: fd.get('location'),
       budget: fd.get('budget'),
       rules: fd.get('rules'),
@@ -488,7 +482,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       </span>
                       <input
                         name="eventDate"
-                        type="datetime-local"
+                        type="date"
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
                       />
                     </label>

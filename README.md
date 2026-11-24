@@ -14,7 +14,6 @@ A **fullstack** web app to run a "Secret Santa" (Amic Invisible) draw for family
 - **Admin panel** `/admin` protected by a password with an HTTP-only cookie.
 - **WhatsApp** integrated with [WAHA](https://waha.devlike.pro/) (`default` session), with a send queue driven from the frontend and a `wa.me` button fallback.
 - **Festive and mobile-first**: Framer Motion, canvas-confetti, a 3D card, burgundy / forest green / gold palette.
-- **Calendar**: downloads an `.ics` with date, location, rules and a private link (never the assigned name in plain text).
 - **i18n**: the UI automatically switches between **Catalan** and **Spanish** based on the device language.
 
 ---
@@ -134,14 +133,14 @@ Services:
 
 ## Using the `/admin` panel
 
-1. **Create event**: title, date/time, location, budget, rules and (optional) message template.
+1. **Create event**: title, date (day only, optional), location (optional), budget, rules and (optional) message template.
 2. **Add participants**: one per line in the format `Name, phone` (the phone is normalized automatically).
 3. **Exclusions**: shared-phone exclusions are automatic; you can add extra manual exclusions.
 4. **Run the draw**: executes the engine. The event becomes `ACTIVE`.
 5. **Send WhatsApp**: sends all messages in a queue (3–5 s delay between them) or one by one. Each participant receives their private `/r/[token]` link.
 6. **Anti-spoiler**: when enabled, not even the admin sees the assignments.
 
-Each participant receives a unique link. Opening it shows their card, lets them **reveal** their gift (with confetti) and **download the `.ics`** reminder.
+Each participant receives a unique link. Opening it shows their card and lets them **reveal** their gift (with confetti) by tapping the mystery card.
 
 ---
 
@@ -164,7 +163,7 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── admin/…        # login, events, participants, exclusions, draw, send-whatsapp, waha/qr
-│   │   └── r/[token]/…    # reveal (POST) and ics (GET)
+│   │   └── r/[token]/…    # reveal (POST)
 │   ├── admin/             # admin panel + login
 │   ├── r/[token]/         # public reveal card
 │   ├── page.tsx           # landing
@@ -179,7 +178,6 @@ src/
 │   ├── draw.ts            # draw engine (MRV + backtracking)
 │   ├── phone.ts           # phone normalization
 │   ├── whatsapp.ts        # WAHA client
-│   ├── ics.ts             # .ics generator
 │   ├── template.ts        # WhatsApp message template
 │   ├── repo.ts            # data-access helpers
 │   └── auth.ts            # password hash / cookie

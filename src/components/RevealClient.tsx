@@ -20,17 +20,10 @@ interface RevealData {
 
 function formatDate(ms: number | null): string {
   if (!ms) return '';
-  try {
-    return new Intl.DateTimeFormat('ca-ES', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(ms));
-  } catch {
-    return new Date(ms).toLocaleString();
-  }
+  const d = new Date(ms);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 function fireConfetti() {
@@ -50,6 +43,7 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
   const [error, setError] = useState<string | null>(null);
 
   const reveal = useCallback(async () => {
+    if (loading || revealed) return;
     setLoading(true);
     setError(null);
     try {
@@ -66,7 +60,7 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
     } finally {
       setLoading(false);
     }
-  }, [data.token, t]);
+  }, [data.token, loading, revealed, t]);
 
   return (
     <main className="festive-bg flex min-h-screen flex-col items-center px-4 py-10">
@@ -80,24 +74,36 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
         <p className="mt-2 text-center text-burgundy-900/60">{data.event.title}</p>
 
         <div className="mt-8 space-y-3 rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm backdrop-blur">
-          {data.event.eventDate && (
-            <InfoRow label={`📅 ${t('reveal.date')}`} value={formatDate(data.event.eventDate)} />
+          <InfoRow
+            label={`📅 ${t('reveal.date')}`}
+            value={data.event.eventDate ? formatDate(data.event.eventDate) : t('reveal.dateUndefined')}
+          />
+          <InfoRow
+            label={`📍 ${t('reveal.location')}`}
+            value={data.event.location || t('reveal.locationUndefined')}
+          />
+          {data.event.budget && (
+            <InfoRow label={`💰 ${t('reveal.budget')}`} value={data.event.budget} />
           )}
-          {data.event.location && <InfoRow label={`📍 ${t('reveal.location')}`} value={data.event.location} />}
-          {data.event.budget && <InfoRow label={`💰 ${t('reveal.budget')}`} value={data.event.budget} />}
           {data.event.rules && <InfoRow label={`📜 ${t('reveal.rules')}`} value={data.event.rules} />}
         </div>
 
         <div className="card-3d mt-8 h-72 w-full">
           <div className="preserve-3d relative h-full w-full">
             <motion.div
-              className="backface-hidden absolute inset-0 flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-burgundy-300 bg-burgundy-50/80 p-6 text-center"
+              className="backface-hidden absolute inset-0 flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed border-burgundy-300 bg-burgundy-50/80 p-6 text-center"
               animate={{ rotateY: revealed ? 180 : 0 }}
               transition={{ duration: 0.7 }}
+              onClick={reveal}
+              role="button"
+              aria-label={t('reveal.cardTitle')}
             >
-              <div className="text-6xl">🎁</div>
+              <div className="relative text-6xl">
+                <span>🧍</span>
+                <span className="absolute -right-4 -top-2 text-3xl">❓</span>
+              </div>
               <p className="mt-4 font-display text-xl font-bold text-burgundy-700">
-                {t('reveal.cardTitle')}
+                {loading ? t('reveal.revealing') : t('reveal.cardTitle')}
               </p>
               {data.viewedAt && !revealed && (
                 <p className="mt-2 text-xs text-burgundy-900/50">{t('reveal.seenBefore')}</p>
@@ -129,32 +135,6 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
             </motion.p>
           )}
         </AnimatePresence>
-
-        {!revealed ? (
-          <button
-            onClick={reveal}
-            disabled={loading}
-            className="mt-6 w-full rounded-full bg-burgundy-600 px-8 py-4 text-lg font-black text-cream shadow-lg shadow-burgundy-600/30 transition hover:bg-burgundy-700 disabled:opacity-60"
-          >
-            {loading ? t('reveal.revealing') : t('reveal.reveal')}
-          </button>
-        ) : (
-          <a
-            href={`/api/r/${data.token}/ics`}
-            className="mt-6 block w-full rounded-full bg-forest-600 px-8 py-4 text-center text-lg font-black text-cream shadow-lg shadow-forest-600/30 transition hover:bg-forest-700"
-          >
-            {t('reveal.download')}
-          </a>
-        )}
-
-        {data.viewedAt && (
-          <a
-            href={`/api/r/${data.token}/ics`}
-            className="mt-3 block text-center text-sm text-forest-700 underline"
-          >
-            {t('reveal.downloadReminder')}
-          </a>
-        )}
       </div>
     </main>
   );

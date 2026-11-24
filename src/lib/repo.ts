@@ -77,15 +77,10 @@ export function getBaseUrl(request?: Request): string {
   return 'http://localhost:3000';
 }
 
-export function formatDate(ms: number | null | undefined, withTime = true): string {
+export function formatDate(ms: number | null | undefined): string {
   if (!ms) return '';
   const d = new Date(ms);
-  const opts: Intl.DateTimeFormatOptions = withTime
-    ? { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }
-    : { day: '2-digit', month: 'long', year: 'numeric' };
-  try {
-    return new Intl.DateTimeFormat('ca-ES', opts).format(d);
-  } catch {
-    return d.toLocaleString();
-  }
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
