@@ -204,11 +204,6 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     const fd = new FormData(form);
     const payload = {
       title: fd.get('title'),
-      eventDate: dateToTimestamp(String(fd.get('eventDate') ?? '')),
-      location: fd.get('location'),
-      budget: fd.get('budget'),
-      rules: fd.get('rules'),
-      avoidTwoCycles: fd.get('avoidTwoCycles') === 'on',
     };
     const res = await fetch('/api/admin/events', {
       method: 'POST',
@@ -483,67 +478,13 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                 <h2 className="font-display text-lg font-bold text-forest-700">
                   {t('admin.newEvent.title')}
                 </h2>
-                <form onSubmit={createEvent} className="mt-4 space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.newEvent.fieldTitle')}
-                      </span>
-                      <input
-                        name="title"
-                        required
-                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                        placeholder={t('admin.newEvent.titlePlaceholder')}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.newEvent.date')}
-                      </span>
-                      <input
-                        name="eventDate"
-                        type="date"
-                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                      />
-                    </label>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.newEvent.location')}
-                      </span>
-                      <input
-                        name="location"
-                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                        placeholder={t('admin.newEvent.locationPlaceholder')}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.newEvent.budget')}
-                      </span>
-                      <input
-                        name="budget"
-                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                        placeholder={t('admin.newEvent.budgetPlaceholder')}
-                      />
-                    </label>
-                  </div>
-                  <label className="block">
-                    <span className="text-xs font-bold text-burgundy-700">
-                      {t('admin.newEvent.rules')}
-                    </span>
-                    <textarea
-                      name="rules"
-                      rows={2}
-                      className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
-                      placeholder={t('admin.newEvent.rulesPlaceholder')}
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 text-sm font-bold text-burgundy-700">
-                    <input name="avoidTwoCycles" type="checkbox" className="h-4 w-4 accent-burgundy-600" />
-                    {t('admin.newEvent.avoidTwoCycles')}
-                  </label>
+                <form onSubmit={createEvent} className="mt-4 flex gap-2">
+                  <input
+                    name="title"
+                    required
+                    className="flex-1 rounded-full border border-burgundy-200 bg-cream px-4 py-2.5"
+                    placeholder={t('admin.newEvent.titlePlaceholder')}
+                  />
                   <button
                     type="submit"
                     className="rounded-full bg-burgundy-600 px-6 py-2.5 font-bold text-cream transition hover:bg-burgundy-700"
