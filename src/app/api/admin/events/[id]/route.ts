@@ -60,7 +60,35 @@ export async function PATCH(
   if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
-  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  const now = Date.now();
+
+  // One-way state machine: DRAFT -> ACTIVE (via draw) -> ARCHIVED. No going back.
+  const allowedTransitions: Record<string, string[]> = {
+    DRAFT: [],
+    ACTIVE: ['ARCHIVED'],
+    ARCHIVED: [],
+  };
+
+  if (typeof body.status === 'string' && body.status !== event.status) {
+    const allowed = allowedTransitions[event.status] ?? [];
+    if (!allowed.includes(body.status)) {
+      return NextResponse.json({ error: 'Invalid status transition' }, { status: 400 });
+    }
+  }
+
+  // A non-draft event is read-only: only a forward status change is allowed.
+  if (event.status !== 'DRAFT') {
+    if (typeof body.status === 'string') {
+      db.update(events)
+        .set({ status: body.status, updatedAt: now })
+        .where(eq(events.id, id))
+        .run();
+      return NextResponse.json({ event: getEventById(id) });
+    }
+    return NextResponse.json({ error: 'This event is read-only' }, { status: 400 });
+  }
+
+  const updates: Record<string, unknown> = { updatedAt: now };
 
   if (typeof body.title === 'string') updates.title = body.title.trim();
   if ('eventDate' in body)
@@ -75,7 +103,6 @@ export async function PATCH(
     updates.messageTemplate =
       typeof body.messageTemplate === 'string' ? body.messageTemplate : null;
   if ('avoidTwoCycles' in body) updates.avoidTwoCycles = !!body.avoidTwoCycles;
-  if (typeof body.status === 'string') updates.status = body.status;
 
   db.update(events).set(updates).where(eq(events.id, id)).run();
 

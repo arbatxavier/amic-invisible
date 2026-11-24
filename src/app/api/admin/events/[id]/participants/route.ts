@@ -19,6 +19,10 @@ export async function POST(
   const event = getEventById(id);
   if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  if (event.status !== 'DRAFT') {
+    return NextResponse.json({ error: 'This event is read-only' }, { status: 400 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const list = Array.isArray(body.participants) ? body.participants : [body];
 

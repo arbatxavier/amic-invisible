@@ -3,6 +3,14 @@ export type Locale = 'ca' | 'es';
 const messages = {
   ca: {
     appName: 'Amic Invisible',
+    common: {
+      cancel: 'Cancel·lar',
+      confirm: 'Confirmar',
+      ok: "D'acord",
+      copy: 'Copiar',
+      open: 'Obrir enllaç',
+      copied: 'Copiat!',
+    },
     landing: {
       eyebrow: 'Sorteig familiar',
       titleFirst: 'Amic',
@@ -48,6 +56,23 @@ const messages = {
       subtitle: "Panell d'administració",
       antiSpoiler: 'Anti-spoiler',
       logout: 'Sortir',
+      archive: 'Arxivar',
+      modal: {
+        deleteTitle: 'Eliminar esdeveniment',
+        archiveTitle: 'Arxivar el sorteig',
+        archiveMessage:
+          "Segur que vols arxivar aquest sorteig? Aquesta acció no es pot desfer i quedarà tancat.",
+        unlinkTitle: 'Desvincular WhatsApp',
+        unlinkMessage:
+          "Segur que vols desvincular aquest WhatsApp? Hauràs de tornar a escanejar el QR.",
+        linkTitle: "Enllaç del participant",
+        drawTitle: 'Fer el sorteig',
+        drawMessage:
+          "Segur que vols fer el sorteig? S'assignaran els regals i ja no es podrà editar res.",
+        drawErrorTitle: 'Error al sortejar',
+        sendErrorTitle: 'Error en enviar',
+        addErrorTitle: 'Error en afegir',
+      },
       newEvent: {
         title: 'Nou esdeveniment',
         fieldTitle: 'Títol *',
@@ -94,6 +119,8 @@ const messages = {
         avoidTwoCycles: 'Evitar cicles de 2',
         draw: '🎲 Fer el sorteig',
         needParticipants: 'Calen almenys 2 participants per sortejar.',
+        activeHint: "Sorteig actiu: només pots enviar els WhatsApp i comprovar qui l'ha revelat.",
+        archivedHint: 'Sorteig arxivat i tancat.',
       },
       participants: {
         title: 'Participants ({n})',
@@ -145,6 +172,14 @@ const messages = {
   },
   es: {
     appName: 'Amigo Invisible',
+    common: {
+      cancel: 'Cancelar',
+      confirm: 'Confirmar',
+      ok: 'Aceptar',
+      copy: 'Copiar',
+      open: 'Abrir enlace',
+      copied: 'Copiado!',
+    },
     landing: {
       eyebrow: 'Sorteo familiar',
       titleFirst: 'Amigo',
@@ -190,6 +225,23 @@ const messages = {
       subtitle: 'Panel de administración',
       antiSpoiler: 'Anti-spoiler',
       logout: 'Salir',
+      archive: 'Archivar',
+      modal: {
+        deleteTitle: 'Eliminar evento',
+        archiveTitle: 'Archivar el sorteo',
+        archiveMessage:
+          '¿Seguro que quieres archivar este sorteo? Esta acción no se puede deshacer y quedará cerrado.',
+        unlinkTitle: 'Desvincular WhatsApp',
+        unlinkMessage:
+          '¿Seguro que quieres desvincular este WhatsApp? Tendrás que volver a escanear el QR.',
+        linkTitle: 'Enlace del participante',
+        drawTitle: 'Hacer el sorteo',
+        drawMessage:
+          '¿Seguro que quieres hacer el sorteo? Se asignarán los regalos y ya no se podrá editar nada.',
+        drawErrorTitle: 'Error al sortear',
+        sendErrorTitle: 'Error al enviar',
+        addErrorTitle: 'Error al añadir',
+      },
       newEvent: {
         title: 'Nuevo evento',
         fieldTitle: 'Título *',
@@ -236,6 +288,8 @@ const messages = {
         avoidTwoCycles: 'Evitar ciclos de 2',
         draw: '🎲 Hacer el sorteo',
         needParticipants: 'Se necesitan al menos 2 participantes para sortear.',
+        activeHint: 'Sorteo activo: solo puedes enviar los WhatsApp y comprobar quién lo ha revelado.',
+        archivedHint: 'Sorteo archivado y cerrado.',
       },
       participants: {
         title: 'Participantes ({n})',

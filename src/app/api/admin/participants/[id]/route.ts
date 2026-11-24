@@ -3,7 +3,7 @@ import { eq, or } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { exclusions, participants } from '@/lib/db/schema';
 import { normalizePhone } from '@/lib/phone';
-import { getParticipantById, syncSamePhoneExclusions } from '@/lib/repo';
+import { getEventById, getParticipantById, syncSamePhoneExclusions } from '@/lib/repo';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +14,11 @@ export async function PATCH(
   const { id } = await params;
   const p = getParticipantById(id);
   if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const event = getEventById(p.eventId);
+  if (event && event.status !== 'DRAFT') {
+    return NextResponse.json({ error: 'This event is read-only' }, { status: 400 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const updates: Record<string, unknown> = { updatedAt: Date.now() };
@@ -35,6 +40,11 @@ export async function DELETE(
   const { id } = await params;
   const p = getParticipantById(id);
   if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const event = getEventById(p.eventId);
+  if (event && event.status !== 'DRAFT') {
+    return NextResponse.json({ error: 'This event is read-only' }, { status: 400 });
+  }
 
   db.delete(exclusions)
     .where(or(eq(exclusions.giverId, id), eq(exclusions.receiverId, id)))

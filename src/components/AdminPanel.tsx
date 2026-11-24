@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeT, type Locale } from '@/lib/i18n';
+import Modal from '@/components/Modal';
 
 type EventStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 type WhatsappStatus = 'PENDING' | 'SENT' | 'FAILED';
@@ -49,6 +50,19 @@ interface EventDetail {
   exclusions: ExclusionRow[];
   spoiler: boolean;
 }
+
+type ModalState =
+  | {
+      kind: 'confirm';
+      title: string;
+      message: string;
+      confirmLabel: string;
+      danger?: boolean;
+      onConfirm: () => void | Promise<void>;
+    }
+  | { kind: 'info'; title: string; message: string }
+  | { kind: 'link'; url: string }
+  | null;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -112,6 +126,12 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
 
   const [sending, setSending] = useState<{ name: string; index: number; total: number } | null>(null);
 
+  const [modal, setModal] = useState<ModalState>(null);
+
+  const readOnly = detail ? detail.event.status !== 'DRAFT' : false;
+  const isActive = detail?.event.status === 'ACTIVE';
+  const isArchived = detail?.event.status === 'ARCHIVED';
+
   const loadEvents = useCallback(async () => {
     setLoadingEvents(true);
     try {
@@ -169,6 +189,13 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     if (selectedId) loadDetail(selectedId, antiSpoiler);
   }, [selectedId, antiSpoiler, loadDetail]);
 
+  async function handleConfirm() {
+    if (modal?.kind !== 'confirm') return;
+    const fn = modal.onConfirm;
+    setModal(null);
+    await fn();
+  }
+
   async function createEvent(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
@@ -196,7 +223,17 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     await loadEvents();
   }
 
-  async function draw() {
+  function confirmDraw() {
+    setModal({
+      kind: 'confirm',
+      title: t('admin.modal.drawTitle'),
+      message: t('admin.modal.drawMessage'),
+      confirmLabel: t('common.confirm'),
+      onConfirm: doDraw,
+    });
+  }
+
+  async function doDraw() {
     if (!selectedId) return;
     const res = await fetch(`/api/admin/events/${selectedId}/draw`, { method: 'POST' });
     const json = await res.json();
@@ -205,7 +242,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
         json.code && drawErrorKeys[json.code]
           ? t(drawErrorKeys[json.code])
           : json.error ?? t('admin.errors.drawFail');
-      alert(msg);
+      setModal({ kind: 'info', title: t('admin.modal.drawErrorTitle'), message: msg });
       return;
     }
     await loadDetail(selectedId, antiSpoiler);
@@ -218,22 +255,38 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     await loadEvents();
   }
 
-  async function deleteEvent(id: string) {
-    if (!confirm(t('admin.errors.confirmDelete'))) return;
-    await fetch(`/api/admin/events/${id}`, { method: 'DELETE' });
-    setSelectedId(null);
-    setDetail(null);
-    await loadEvents();
+  function confirmDeleteEvent(id: string) {
+    setModal({
+      kind: 'confirm',
+      title: t('admin.modal.deleteTitle'),
+      message: t('admin.errors.confirmDelete'),
+      confirmLabel: t('common.confirm'),
+      danger: true,
+      onConfirm: async () => {
+        await fetch(`/api/admin/events/${id}`, { method: 'DELETE' });
+        setSelectedId(null);
+        setDetail(null);
+        await loadEvents();
+      },
+    });
   }
 
-  async function setStatus(id: string, status: EventStatus) {
-    await fetch(`/api/admin/events/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+  function confirmArchive(id: string) {
+    setModal({
+      kind: 'confirm',
+      title: t('admin.modal.archiveTitle'),
+      message: t('admin.modal.archiveMessage'),
+      confirmLabel: t('common.confirm'),
+      onConfirm: async () => {
+        await fetch(`/api/admin/events/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'ARCHIVED' }),
+        });
+        await loadEvents();
+        if (selectedId === id) await loadDetail(id, antiSpoiler);
+      },
     });
-    await loadEvents();
-    if (selectedId === id) await loadDetail(id, antiSpoiler);
   }
 
   async function updateEventField(field: string, value: unknown) {
@@ -266,7 +319,11 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      alert(json.error ?? t('admin.errors.addFail'));
+      setModal({
+        kind: 'info',
+        title: t('admin.modal.addErrorTitle'),
+        message: json.error ?? t('admin.errors.addFail'),
+      });
       return;
     }
     await loadDetail(selectedId, antiSpoiler);
@@ -335,17 +392,20 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       const res = await fetch(`/api/admin/participants/${id}/send-whatsapp`, { method: 'POST' });
       const json = await res.json().catch(() => ({}));
       if (!res.ok && json.fallback) window.open(json.fallback, '_blank');
-      if (!res.ok && json.error) alert(json.error);
+      if (!res.ok && json.error) {
+        setModal({ kind: 'info', title: t('admin.modal.sendErrorTitle'), message: json.error });
+        return;
+      }
     } catch {
-      alert(t('admin.errors.sendFail'));
+      setModal({ kind: 'info', title: t('admin.modal.sendErrorTitle'), message: t('admin.errors.sendFail') });
+      return;
     }
     if (selectedId) await loadDetail(selectedId, antiSpoiler);
   }
 
-  function copyLink(token: string) {
+  function openLink(token: string) {
     const url = `${window.location.origin}/r/${token}`;
-    navigator.clipboard?.writeText(url);
-    alert(t('admin.errors.linkCopied', { url }));
+    setModal({ kind: 'link', url });
   }
 
   async function logout() {
@@ -353,10 +413,18 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
     window.location.href = '/admin/login';
   }
 
-  async function unlinkWaha() {
-    await fetch('/api/admin/waha/logout', { method: 'POST' });
-    setQrNonce((n) => n + 1);
-    await loadWaha();
+  function confirmUnlinkWaha() {
+    setModal({
+      kind: 'confirm',
+      title: t('admin.modal.unlinkTitle'),
+      message: t('admin.modal.unlinkMessage'),
+      confirmLabel: t('common.confirm'),
+      onConfirm: async () => {
+        await fetch('/api/admin/waha/logout', { method: 'POST' });
+        setQrNonce((n) => n + 1);
+        await loadWaha();
+      },
+    });
   }
 
   return (
@@ -517,7 +585,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                               {t('admin.events.clone')}
                             </button>
                             <button
-                              onClick={() => deleteEvent(ev.id)}
+                              onClick={() => confirmDeleteEvent(ev.id)}
                               className="rounded-full border border-red-300 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50"
                             >
                               {t('admin.events.delete')}
@@ -555,7 +623,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       </div>
                     </div>
                     <button
-                      onClick={unlinkWaha}
+                      onClick={confirmUnlinkWaha}
                       className="mt-3 w-full rounded-full border border-red-300 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
                     >
                       {t('admin.waha.unlink')}
@@ -606,21 +674,30 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       {detail.event.title}
                     </h2>
                     <div className="flex items-center gap-2">
-                      {(['DRAFT', 'ACTIVE', 'ARCHIVED'] as EventStatus[]).map((s) => (
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusColor[detail.event.status]}`}>
+                        {t(`admin.status.${detail.event.status}`)}
+                      </span>
+                      {isActive && (
                         <button
-                          key={s}
-                          onClick={() => setStatus(detail.event.id, s)}
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            detail.event.status === s
-                              ? 'bg-burgundy-600 text-cream'
-                              : 'border border-burgundy-300 text-burgundy-700 hover:bg-burgundy-50'
-                          }`}
+                          onClick={() => confirmArchive(detail.event.id)}
+                          className="rounded-full border border-burgundy-300 px-3 py-1 text-xs font-bold text-burgundy-700 hover:bg-burgundy-50"
                         >
-                          {t(`admin.status.${s}`)}
+                          {t('admin.archive')}
                         </button>
-                      ))}
+                      )}
                     </div>
                   </div>
+
+                  {isActive && (
+                    <p className="mt-3 rounded-xl bg-forest-50 px-4 py-2 text-sm text-forest-700">
+                      {t('admin.detail.activeHint')}
+                    </p>
+                  )}
+                  {isArchived && (
+                    <p className="mt-3 rounded-xl bg-burgundy-50 px-4 py-2 text-sm text-burgundy-700">
+                      {t('admin.detail.archivedHint')}
+                    </p>
+                  )}
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     <label className="block">
@@ -629,8 +706,9 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       </span>
                       <input
                         defaultValue={detail.event.location ?? ''}
+                        disabled={readOnly}
                         onBlur={(e) => updateEventField('location', e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
                       />
                     </label>
                     <label className="block">
@@ -639,14 +717,16 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       </span>
                       <input
                         defaultValue={detail.event.budget ?? ''}
+                        disabled={readOnly}
                         onBlur={(e) => updateEventField('budget', e.target.value)}
-                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2"
+                        className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 disabled:opacity-60"
                       />
                     </label>
                     <label className="flex items-end gap-2 pb-2 text-sm font-bold text-burgundy-700">
                       <input
                         type="checkbox"
                         defaultChecked={detail.event.avoidTwoCycles}
+                        disabled={readOnly}
                         onChange={(e) => updateEventField('avoidTwoCycles', e.target.checked)}
                         className="h-4 w-4 accent-burgundy-600"
                       />
@@ -654,17 +734,21 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </label>
                   </div>
 
-                  <button
-                    onClick={draw}
-                    disabled={detail.participants.length < 2}
-                    className="mt-4 rounded-full bg-burgundy-600 px-6 py-2.5 font-bold text-cream transition hover:bg-burgundy-700 disabled:opacity-50"
-                  >
-                    {t('admin.detail.draw')}
-                  </button>
-                  {detail.participants.length < 2 && (
-                    <p className="mt-2 text-xs text-burgundy-900/50">
-                      {t('admin.detail.needParticipants')}
-                    </p>
+                  {!readOnly && (
+                    <>
+                      <button
+                        onClick={confirmDraw}
+                        disabled={detail.participants.length < 2}
+                        className="mt-4 rounded-full bg-burgundy-600 px-6 py-2.5 font-bold text-cream transition hover:bg-burgundy-700 disabled:opacity-50"
+                      >
+                        {t('admin.detail.draw')}
+                      </button>
+                      {detail.participants.length < 2 && (
+                        <p className="mt-2 text-xs text-burgundy-900/50">
+                          {t('admin.detail.needParticipants')}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -672,23 +756,28 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                   <h3 className="font-display text-lg font-bold text-forest-700">
                     {t('admin.participants.title', { n: detail.participants.length })}
                   </h3>
-                  <p className="text-xs text-burgundy-900/50">{t('admin.participants.help')}</p>
-                  <textarea
-                    id="bulkParticipants"
-                    rows={3}
-                    className="mt-2 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 text-sm"
-                    placeholder={t('admin.participants.placeholder')}
-                  />
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById('bulkParticipants') as HTMLTextAreaElement;
-                      addParticipants(el.value);
-                      el.value = '';
-                    }}
-                    className="mt-2 rounded-full bg-forest-600 px-5 py-2 text-sm font-bold text-cream hover:bg-forest-700"
-                  >
-                    {t('admin.participants.add')}
-                  </button>
+
+                  {!readOnly && (
+                    <>
+                      <p className="text-xs text-burgundy-900/50">{t('admin.participants.help')}</p>
+                      <textarea
+                        id="bulkParticipants"
+                        rows={3}
+                        className="mt-2 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 text-sm"
+                        placeholder={t('admin.participants.placeholder')}
+                      />
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById('bulkParticipants') as HTMLTextAreaElement;
+                          addParticipants(el.value);
+                          el.value = '';
+                        }}
+                        className="mt-2 rounded-full bg-forest-600 px-5 py-2 text-sm font-bold text-cream hover:bg-forest-700"
+                      >
+                        {t('admin.participants.add')}
+                      </button>
+                    </>
+                  )}
 
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full text-sm">
@@ -708,15 +797,17 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                             <td className="py-2 pr-2">
                               <input
                                 defaultValue={p.name}
+                                disabled={readOnly}
                                 onBlur={(e) => updateParticipant(p.id, { name: e.target.value })}
-                                className="w-full rounded border border-transparent bg-transparent px-1 py-1 hover:border-burgundy-200"
+                                className="w-full rounded border border-transparent bg-transparent px-1 py-1 hover:border-burgundy-200 disabled:cursor-default"
                               />
                             </td>
                             <td className="py-2 pr-2">
                               <input
                                 defaultValue={p.phone ?? ''}
+                                disabled={readOnly}
                                 onBlur={(e) => updateParticipant(p.id, { phone: e.target.value })}
-                                className="w-28 rounded border border-transparent bg-transparent px-1 py-1 hover:border-burgundy-200"
+                                className="w-28 rounded border border-transparent bg-transparent px-1 py-1 hover:border-burgundy-200 disabled:cursor-default"
                               />
                             </td>
                             {!antiSpoiler && (
@@ -733,23 +824,27 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                             <td className="py-2">
                               <div className="flex gap-1">
                                 <button
-                                  onClick={() => copyLink(p.token)}
+                                  onClick={() => openLink(p.token)}
                                   className="rounded border border-burgundy-200 px-2 py-0.5 text-xs text-burgundy-700 hover:bg-burgundy-50"
                                 >
                                   {t('admin.participants.actionLink')}
                                 </button>
-                                <button
-                                  onClick={() => sendOne(p.id)}
-                                  className="rounded border border-forest-200 px-2 py-0.5 text-xs text-forest-700 hover:bg-forest-50"
-                                >
-                                  {t('admin.participants.actionSend')}
-                                </button>
-                                <button
-                                  onClick={() => deleteParticipant(p.id)}
-                                  className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
-                                >
-                                  ✕
-                                </button>
+                                {isActive && (
+                                  <button
+                                    onClick={() => sendOne(p.id)}
+                                    className="rounded border border-forest-200 px-2 py-0.5 text-xs text-forest-700 hover:bg-forest-50"
+                                  >
+                                    {t('admin.participants.actionSend')}
+                                  </button>
+                                )}
+                                {!readOnly && (
+                                  <button
+                                    onClick={() => deleteParticipant(p.id)}
+                                    className="rounded border border-red-200 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -758,36 +853,42 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </table>
                   </div>
 
-                  <div className="mt-4">
-                    <button
-                      onClick={sendQueue}
-                      disabled={!!sending || detail.participants.filter((p) => p.phone).length === 0}
-                      className="rounded-full bg-gold-500 px-5 py-2 text-sm font-bold text-burgundy-900 hover:bg-gold-400 disabled:opacity-50"
-                    >
-                      {sending
-                        ? t('admin.send.sending', {
-                            index: sending.index,
-                            total: sending.total,
-                            name: sending.name,
-                          })
-                        : t('admin.send.queue')}
-                    </button>
-                    <p className="mt-1 text-xs text-burgundy-900/50">{t('admin.send.hint')}</p>
-                  </div>
+                  {isActive && (
+                    <div className="mt-4">
+                      <button
+                        onClick={sendQueue}
+                        disabled={!!sending || detail.participants.filter((p) => p.phone).length === 0}
+                        className="rounded-full bg-gold-500 px-5 py-2 text-sm font-bold text-burgundy-900 hover:bg-gold-400 disabled:opacity-50"
+                      >
+                        {sending
+                          ? t('admin.send.sending', {
+                              index: sending.index,
+                              total: sending.total,
+                              name: sending.name,
+                            })
+                          : t('admin.send.queue')}
+                      </button>
+                      <p className="mt-1 text-xs text-burgundy-900/50">{t('admin.send.hint')}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm">
                   <h3 className="font-display text-lg font-bold text-forest-700">
                     {t('admin.exclusions.title')}
                   </h3>
-                  <p className="text-xs text-burgundy-900/50">{t('admin.exclusions.help')}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <ExclusionEditor
-                      t={t}
-                      participants={detail.participants}
-                      onAdd={(g, r) => addExclusion(g, r)}
-                    />
-                  </div>
+                  {!readOnly && (
+                    <>
+                      <p className="text-xs text-burgundy-900/50">{t('admin.exclusions.help')}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <ExclusionEditor
+                          t={t}
+                          participants={detail.participants}
+                          onAdd={(g, r) => addExclusion(g, r)}
+                        />
+                      </div>
+                    </>
+                  )}
                   <ul className="mt-4 space-y-1 text-sm">
                     {detail.exclusions.map((e) => {
                       const g = detail.participants.find((p) => p.id === e.giverId)?.name ?? e.giverId;
@@ -800,7 +901,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                               {e.reason}
                             </span>
                           </span>
-                          {e.reason === 'MANUAL' && (
+                          {e.reason === 'MANUAL' && !readOnly && (
                             <button
                               onClick={() => deleteExclusion(e.id)}
                               className="text-red-600 hover:underline"
@@ -818,7 +919,112 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
           </div>
         )}
       </div>
+
+      {modal?.kind === 'confirm' && (
+        <Modal
+          open
+          title={modal.title}
+          onClose={() => setModal(null)}
+          footer={
+            <>
+              <button
+                onClick={() => setModal(null)}
+                className="rounded-full border border-burgundy-300 px-4 py-2 text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleConfirm}
+                className={`rounded-full px-5 py-2 text-sm font-bold text-cream ${
+                  modal.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-burgundy-600 hover:bg-burgundy-700'
+                }`}
+              >
+                {modal.confirmLabel}
+              </button>
+            </>
+          }
+        >
+          <p className="whitespace-pre-wrap">{modal.message}</p>
+        </Modal>
+      )}
+
+      {modal?.kind === 'info' && (
+        <Modal
+          open
+          title={modal.title}
+          onClose={() => setModal(null)}
+          footer={
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-full bg-burgundy-600 px-5 py-2 text-sm font-bold text-cream hover:bg-burgundy-700"
+            >
+              {t('common.ok')}
+            </button>
+          }
+        >
+          <p className="whitespace-pre-wrap">{modal.message}</p>
+        </Modal>
+      )}
+
+      {modal?.kind === 'link' && (
+        <Modal
+          open
+          title={t('admin.modal.linkTitle')}
+          onClose={() => setModal(null)}
+          footer={
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-full border border-burgundy-300 px-4 py-2 text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
+            >
+              {t('common.ok')}
+            </button>
+          }
+        >
+          <LinkContent url={modal.url} t={t} />
+        </Modal>
+      )}
     </main>
+  );
+}
+
+function LinkContent({ url, t }: { url: string; t: TFunc }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  }
+
+  return (
+    <div>
+      <input
+        readOnly
+        value={url}
+        onFocus={(e) => e.currentTarget.select()}
+        className="w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 text-sm"
+      />
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={copy}
+          className="flex-1 rounded-full bg-forest-600 px-4 py-2 text-sm font-bold text-cream hover:bg-forest-700"
+        >
+          {copied ? t('common.copied') : t('common.copy')}
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 rounded-full border border-burgundy-300 px-4 py-2 text-center text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
+        >
+          {t('common.open')}
+        </a>
+      </div>
+    </div>
   );
 }
 

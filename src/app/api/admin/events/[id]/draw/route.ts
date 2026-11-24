@@ -19,6 +19,10 @@ export async function POST(
   const event = getEventById(id);
   if (!event) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  if (event.status !== 'DRAFT') {
+    return NextResponse.json({ error: 'The draw has already been done' }, { status: 400 });
+  }
+
   const parts = getParticipantsByEvent(id);
   const excl = getExclusionsByEvent(id);
 
@@ -51,12 +55,10 @@ export async function POST(
       .run();
   }
 
-  if (event.status === 'DRAFT') {
-    db.update(events)
-      .set({ status: 'ACTIVE', updatedAt: now })
-      .where(eq(events.id, id))
-      .run();
-  }
+  db.update(events)
+    .set({ status: 'ACTIVE', updatedAt: now })
+    .where(eq(events.id, id))
+    .run();
 
   return NextResponse.json({ ok: true, assignments: parts.length });
 }
