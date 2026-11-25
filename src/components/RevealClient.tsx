@@ -28,10 +28,6 @@ function formatDate(ms: number | null): string {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-function cleanRules(s: string): string {
-  return s.replace(/\*/g, '');
-}
-
 function fireConfetti() {
   const colors = ['#8f2a43', '#2e5e43', '#d4a537', '#f2d98b', '#ffffff'];
   confetti({ particleCount: 120, spread: 75, origin: { y: 0.6 }, colors });
@@ -39,6 +35,29 @@ function fireConfetti() {
     confetti({ particleCount: 60, angle: 60, spread: 60, origin: { x: 0 }, colors });
     confetti({ particleCount: 60, angle: 120, spread: 60, origin: { x: 1 }, colors });
   }, 250);
+}
+
+function renderBold(text: string): React.ReactNode[] {
+  return text
+    .split(/\*([^*]+)\*/g)
+    .map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : part));
+}
+
+function RulesBlock({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <div className="mt-3 text-sm text-burgundy-900/80">
+      {lines.map((line, i) =>
+        line.trim() === '' ? (
+          <div key={i} className="h-3" />
+        ) : (
+          <p key={i} className="whitespace-pre-wrap">
+            {renderBold(line)}
+          </p>
+        ),
+      )}
+    </div>
+  );
 }
 
 export default function RevealClient({ data, locale }: { data: RevealData; locale: Locale }) {
@@ -68,6 +87,9 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
     }
   }, [data.token, loading, revealed, t]);
 
+  const rules =
+    (locale === 'es' ? data.event.rulesEs : data.event.rules) || getDefaultRules(locale);
+
   return (
     <main className="festive-bg flex min-h-screen flex-col items-center px-4 py-10">
       <div className="w-full max-w-md">
@@ -92,13 +114,8 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
             label={`💰 ${t('reveal.budget')}`}
             value={data.event.budget || t('reveal.budgetUndefined')}
           />
-          <InfoRow
-            label={`📜 ${t('reveal.rules')}`}
-            value={cleanRules(
-              (locale === 'es' ? data.event.rulesEs : data.event.rules) || getDefaultRules(locale),
-            )}
-          />
         </div>
+
         <div className="card-3d mt-8 h-72 w-full">
           <div className="preserve-3d relative h-full w-full">
             <motion.div
@@ -132,6 +149,13 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
               <p className="mt-1 text-sm text-cream/80">{t('reveal.isPerson')}</p>
             </motion.div>
           </div>
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-gold-200 bg-white/70 p-5 shadow-sm backdrop-blur">
+          <h2 className="font-display text-lg font-bold text-forest-700">
+            📜 {t('reveal.rules')}
+          </h2>
+          <RulesBlock text={rules} />
         </div>
 
         <AnimatePresence>
