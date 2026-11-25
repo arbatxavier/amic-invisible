@@ -1,20 +1,5 @@
 import type { Metadata } from 'next';
-import { Nunito, Playfair_Display } from 'next/font/google';
 import './globals.css';
-
-const display = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-display',
-  weight: ['500', '600', '700', '800', '900'],
-  display: 'swap',
-});
-
-const sans = Nunito({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  weight: ['400', '500', '600', '700', '800', '900'],
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: {
@@ -31,7 +16,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ca" className={`${display.variable} ${sans.variable}`}>
+    <html lang="ca">
       <body className="min-h-screen font-sans antialiased">{children}</body>
     </html>
   );

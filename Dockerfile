@@ -14,7 +14,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN npm run build || npm run build || npm run build
 
 # 3. Runtime
 FROM node:20-slim AS runner
