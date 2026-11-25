@@ -17,7 +17,7 @@ services:
       - waha
 
   waha:
-    image: devlikeapro/waha:gows
+    image: devlikeapro/waha:gows-arm
     container_name: amic-waha
     restart: unless-stopped
     ports:
