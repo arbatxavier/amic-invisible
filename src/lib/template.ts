@@ -1,33 +1,25 @@
 export const DEFAULT_MESSAGE_TEMPLATE_CA = [
-  'Hola {name}! 🎁',
+  '🎄✨ *AMIC INVISIBLE FAMÍLIA ARBAT* ✨🎄',
   '',
-  "Ja tenim l'Amic Invisible! T'ha tocat regalar a {friend}.",
+  'Hola *{nom}*! 👋',
   '',
-  '🎉 {title}',
-  '📅 {date}',
-  '📍 {location}',
-  '💰 Pressupost: {budget}',
+  "Ja s'ha fet el sorteig i ha arribat el moment de descobrir a qui li fas el regal aquest any 🎁",
   '',
-  'Normes:',
-  '{rules}',
+  '👇 *Entra al teu enllaç secret (no el comparteixis!):*',
   '',
-  'Revela el teu regal aquí 👉 {link}',
+  '{link}',
 ].join('\n');
 
 export const DEFAULT_MESSAGE_TEMPLATE_ES = [
-  'Hola {name}! 🎁',
+  '🎄✨ *AMIGO INVISIBLE FAMILIA ARBAT* ✨🎄',
   '',
-  '¡Ya tenemos el Amigo Invisible! Te ha tocado regalar a {friend}.',
+  '¡Hola *{nom}*! 👋',
   '',
-  '🎉 {title}',
-  '📅 {date}',
-  '📍 {location}',
-  '💰 Presupuesto: {budget}',
+  'Ya se ha hecho el sorteo y ha llegado el momento de descubrir a quién le haces el regalo este año 🎁',
   '',
-  'Normas:',
-  '{rules}',
+  '👇 *Entra en tu enlace secreto (¡no lo compartas!):*',
   '',
-  'Revela tu regalo aquí 👉 {link}',
+  '{link}',
 ].join('\n');
 
 export function getDefaultTemplate(lang: string): string {

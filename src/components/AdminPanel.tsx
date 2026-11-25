@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { makeT, type Locale } from '@/lib/i18n';
 import Modal from '@/components/Modal';
+import { DEFAULT_MESSAGE_TEMPLATE_CA, DEFAULT_MESSAGE_TEMPLATE_ES } from '@/lib/template';
 
 type EventStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
 type WhatsappStatus = 'PENDING' | 'SENT' | 'FAILED';
@@ -242,12 +243,6 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       return;
     }
     await loadDetail(selectedId);
-    await loadEvents();
-  }
-
-  async function cloneEvent(id: string) {
-    const res = await fetch(`/api/admin/events/${id}/clone`, { method: 'POST' });
-    if (!res.ok) return;
     await loadEvents();
   }
 
@@ -524,12 +519,6 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                               {t(`admin.status.${ev.status}`)}
                             </span>
                             <button
-                              onClick={() => cloneEvent(ev.id)}
-                              className="rounded-full border border-forest-300 px-3 py-1 text-xs font-bold text-forest-700 hover:bg-forest-50"
-                            >
-                              {t('admin.events.clone')}
-                            </button>
-                            <button
                               onClick={() => confirmDeleteEvent(ev.id)}
                               className="rounded-full border border-red-300 px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50"
                             >
@@ -723,6 +712,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       <textarea
                         rows={6}
                         defaultValue={detail.event.messageTemplate ?? ''}
+                        placeholder={DEFAULT_MESSAGE_TEMPLATE_CA}
                         disabled={isArchived}
                         onBlur={(e) => updateEventField('messageTemplate', e.target.value)}
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 font-mono text-xs disabled:opacity-60"
@@ -735,13 +725,13 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       <textarea
                         rows={6}
                         defaultValue={detail.event.messageTemplateEs ?? ''}
+                        placeholder={DEFAULT_MESSAGE_TEMPLATE_ES}
                         disabled={isArchived}
                         onBlur={(e) => updateEventField('messageTemplateEs', e.target.value)}
                         className="mt-1 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 font-mono text-xs disabled:opacity-60"
                       />
                     </label>
                   </div>
-                  <p className="mt-1 text-xs text-burgundy-900/50">{t('admin.detail.templateHint')}</p>
 
                   {!readOnly && (
                     <>

@@ -37,6 +37,7 @@ export async function sendMessageToParticipant(
     template,
     {
       name: p.name,
+      nom: p.name,
       friend: assigned.name,
       title: event.title,
       date: formatDate(event.eventDate),

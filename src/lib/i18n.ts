@@ -97,7 +97,6 @@ const messages = {
         empty: 'Encara no hi ha cap esdeveniment.',
         withoutDate: 'Sense data',
         participants: '{n} participants',
-        clone: 'Clonar',
         delete: 'Eliminar',
       },
       status: {
@@ -277,7 +276,6 @@ const messages = {
         empty: 'Aún no hay ningún evento.',
         withoutDate: 'Sin fecha',
         participants: '{n} participantes',
-        clone: 'Clonar',
         delete: 'Eliminar',
       },
       status: {
