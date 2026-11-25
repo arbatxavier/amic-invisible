@@ -10,7 +10,7 @@ export async function GET() {
   }
 
   try {
-    const groups = await getGroups();
+    const groups = (await getGroups()).map(({ id, name }) => ({ id, name }));
     return NextResponse.json({ configured: true, groups });
   } catch (err) {
     return NextResponse.json({

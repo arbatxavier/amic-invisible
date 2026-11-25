@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { participants } from '@/lib/db/schema';
 import { newId, newToken } from '@/lib/id';
 import { normalizePhone } from '@/lib/phone';
-import { getGroupParticipants } from '@/lib/whatsapp';
+import { getGroups } from '@/lib/whatsapp';
 import { getEventById, syncSamePhoneExclusions } from '@/lib/repo';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,13 @@ export async function POST(
     return NextResponse.json({ error: 'Group id is required' }, { status: 400 });
   }
 
-  const members = await getGroupParticipants(groupId);
+  const groups = await getGroups();
+  const group = groups.find((g) => g.id === groupId);
+  if (!group) {
+    return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+  }
+
+  const members = group.members;
   if (members.length === 0) {
     return NextResponse.json({ error: 'No participants found in this group' }, { status: 400 });
   }
@@ -35,7 +41,7 @@ export async function POST(
 
   for (const m of members) {
     const phone = normalizePhone(m.phone);
-    const name = phone || m.id;
+    const name = (m.name && m.name.trim()) || phone || 'Sense nom';
     db.insert(participants)
       .values({
         id: newId(),

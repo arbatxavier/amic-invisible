@@ -109,13 +109,34 @@ export async function sendWhatsAppText(phone: string, text: string): Promise<voi
   }
 }
 
+export interface WahaGroupMember {
+  name: string;
+  phone: string;
+}
+
 export interface WahaGroup {
   id: string;
   name: string;
+  members: WahaGroupMember[];
+}
+
+function extractPhone(raw: string): string {
+  if (!raw) return '';
+  return raw.split('@')[0].replace(/\D/g, '');
+}
+
+function participantPhone(p: Record<string, unknown>): string {
+  for (const key of ['PhoneNumber', 'phone', 'pn', 'phoneNumber']) {
+    const ph = extractPhone(String(p[key] ?? ''));
+    if (ph.length >= 8) return ph;
+  }
+  const id = String(p.id ?? p.JID ?? '');
+  if (id.endsWith('@c.us')) return id.slice(0, -5);
+  return '';
 }
 
 export async function getGroups(): Promise<WahaGroup[]> {
-  const res = await wahaRequest('/api/default/groups?exclude=participants');
+  const res = await wahaRequest('/api/default/groups');
   if (!res.ok) return [];
   const data = await res.json().catch(() => []);
   const list: Record<string, unknown>[] = Array.isArray(data)
@@ -124,50 +145,18 @@ export async function getGroups(): Promise<WahaGroup[]> {
       ? data.data
       : [];
   return list
-    .map((g) => ({
-      id: String(g.id ?? g.gid ?? ''),
-      name: String(g.name ?? g.subject ?? g.id ?? ''),
-    }))
+    .map((g) => {
+      const id = String(g.id ?? g.JID ?? g.gid ?? '');
+      const name = String(g.name ?? g.subject ?? g.Name ?? id);
+      const rawParticipants = (g.Participants ?? g.participants ?? g.members ?? []) as Record<
+        string,
+        unknown
+      >[];
+      const members = rawParticipants.map((p) => ({
+        name: String(p.DisplayName ?? p.name ?? p.pushName ?? '').trim(),
+        phone: participantPhone(p),
+      }));
+      return { id, name, members };
+    })
     .filter((g) => g.id);
-}
-
-async function resolveLidToPhone(lid: string): Promise<string> {
-  try {
-    const res = await wahaRequest(`/api/default/lids/${encodeURIComponent(lid)}`);
-    if (!res.ok) return '';
-    const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-    if (!data) return '';
-    const raw = data.pn ?? data.phone ?? data.phoneNumber ?? data.id;
-    if (typeof raw === 'string') {
-      if (raw.endsWith('@c.us')) return raw.slice(0, -5);
-      if (/^\d+$/.test(raw)) return raw;
-    }
-    return '';
-  } catch {
-    return '';
-  }
-}
-
-export interface WahaGroupMember {
-  id: string;
-  phone: string;
-}
-
-export async function getGroupParticipants(groupId: string): Promise<WahaGroupMember[]> {
-  const res = await wahaRequest(
-    `/api/default/groups/${encodeURIComponent(groupId)}/participants/v2`,
-  );
-  if (!res.ok) return [];
-  const data = await res.json().catch(() => []);
-  const list = Array.isArray(data) ? data : [];
-  const members: WahaGroupMember[] = [];
-  for (const p of list) {
-    const id = String((p as Record<string, unknown>).id ?? '');
-    if (!id) continue;
-    let phone = '';
-    if (id.endsWith('@c.us')) phone = id.slice(0, -5);
-    else if (id.endsWith('@lid')) phone = await resolveLidToPhone(id);
-    members.push({ id, phone });
-  }
-  return members;
 }
