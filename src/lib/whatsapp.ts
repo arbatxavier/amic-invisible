@@ -135,6 +135,21 @@ function participantPhone(p: Record<string, unknown>): string {
   return '';
 }
 
+function contactName(c: Record<string, unknown>): string {
+  const name = String(c.name ?? '').trim();
+  const pushname = String(c.pushname ?? '').trim();
+  if (name && !name.startsWith('@')) return name;
+  if (pushname) return pushname;
+  return name;
+}
+
+export async function getContacts(): Promise<Record<string, unknown>[]> {
+  const res = await wahaRequest('/api/contacts/all?session=default');
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => []);
+  return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+}
+
 export async function getGroups(): Promise<WahaGroup[]> {
   const res = await wahaRequest('/api/default/groups');
   if (!res.ok) return [];
@@ -144,6 +159,18 @@ export async function getGroups(): Promise<WahaGroup[]> {
     : Array.isArray(data?.data)
       ? data.data
       : [];
+
+  const contacts = await getContacts();
+  const phoneMap = new Map<string, string>();
+  const lidMap = new Map<string, string>();
+  for (const c of contacts) {
+    const id = String(c.id ?? '');
+    const nm = contactName(c);
+    if (!nm) continue;
+    if (id.endsWith('@c.us')) phoneMap.set(id.slice(0, -5), nm);
+    else if (id.endsWith('@lid')) lidMap.set(id, nm);
+  }
+
   return list
     .map((g) => {
       const id = String(g.id ?? g.JID ?? g.gid ?? '');
@@ -152,10 +179,12 @@ export async function getGroups(): Promise<WahaGroup[]> {
         string,
         unknown
       >[];
-      const members = rawParticipants.map((p) => ({
-        name: String(p.DisplayName ?? p.name ?? p.pushName ?? '').trim(),
-        phone: participantPhone(p),
-      }));
+      const members = rawParticipants.map((p) => {
+        const phone = participantPhone(p);
+        const lid = String(p.LID ?? p.JID ?? '');
+        const nm = (phone && phoneMap.get(phone)) || (lid && lidMap.get(lid)) || '';
+        return { name: nm, phone };
+      });
       return { id, name, members };
     })
     .filter((g) => g.id);
