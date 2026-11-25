@@ -22,6 +22,9 @@ export const metadata: Metadata = {
     template: '%s · Amic Invisible',
   },
   description: "Sorteig d'Amic Invisible per a la família i els amics, amb WhatsApp.",
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
