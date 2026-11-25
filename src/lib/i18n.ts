@@ -74,6 +74,11 @@ const messages = {
         sendErrorTitle: 'Error en enviar',
         addErrorTitle: 'Error en afegir',
         sendAllTitle: 'Enviament massiu',
+        importTitle: 'Importar del grup',
+        importHint:
+          "Selecciona un grup de WhatsApp. Es recuperaran els participants amb el telèfon (si WhatsApp l'exposa).",
+        noGroups: "No s'ha trobat cap grup.",
+        importResult: 'Importats: {n} participants.',
       },
       newEvent: {
         title: 'Nou esdeveniment',
@@ -138,6 +143,7 @@ const messages = {
         help: 'Format per afegir: «Nom, telèfon» (una línia per participant).',
         placeholder: 'Anna, 600112233\nPere, 611223344',
         add: 'Afegir participants',
+        importGroup: 'Importar del grup',
         colName: 'Nom',
         colPhone: 'Telèfon',
         colLang: 'Idioma',
@@ -256,6 +262,11 @@ const messages = {
         sendErrorTitle: 'Error al enviar',
         addErrorTitle: 'Error al añadir',
         sendAllTitle: 'Envío masivo',
+        importTitle: 'Importar del grupo',
+        importHint:
+          'Selecciona un grupo de WhatsApp. Se recuperarán los participantes con su teléfono (si WhatsApp lo expone).',
+        noGroups: 'No se ha encontrado ningún grupo.',
+        importResult: 'Importados: {n} participantes.',
       },
       newEvent: {
         title: 'Nuevo evento',
@@ -320,6 +331,7 @@ const messages = {
         help: 'Formato para añadir: «Nombre, teléfono» (una línea por participante).',
         placeholder: 'Anna, 600112233\nPere, 611223344',
         add: 'Añadir participantes',
+        importGroup: 'Importar del grupo',
         colName: 'Nombre',
         colPhone: 'Teléfono',
         colLang: 'Idioma',

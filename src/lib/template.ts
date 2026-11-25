@@ -1,5 +1,5 @@
 export const DEFAULT_MESSAGE_TEMPLATE_CA = [
-  '🎄✨ *AMIC INVISIBLE FAMÍLIA ARBAT* ✨🎄',
+  '🎄✨ *{title}* ✨🎄',
   '',
   'Hola *{nom}*! 👋',
   '',
@@ -11,7 +11,7 @@ export const DEFAULT_MESSAGE_TEMPLATE_CA = [
 ].join('\n');
 
 export const DEFAULT_MESSAGE_TEMPLATE_ES = [
-  '🎄✨ *AMIGO INVISIBLE FAMILIA ARBAT* ✨🎄',
+  '🎄✨ *{title}* ✨🎄',
   '',
   '¡Hola *{nom}*! 👋',
   '',

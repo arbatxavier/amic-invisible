@@ -71,6 +71,7 @@ type ModalState =
     }
   | { kind: 'info'; title: string; message: string }
   | { kind: 'link'; url: string }
+  | { kind: 'groups' }
   | null;
 
 const drawErrorKeys: Record<string, string> = {
@@ -137,6 +138,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
   const [sendingAll, setSendingAll] = useState(false);
 
   const [modal, setModal] = useState<ModalState>(null);
+  const [groups, setGroups] = useState<{ id: string; name: string }[] | null>(null);
 
   const readOnly = detail ? detail.event.status !== 'DRAFT' : false;
   const isActive = detail?.event.status === 'ACTIVE';
@@ -424,6 +426,44 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
       else next.add(id);
       return next;
     });
+  }
+
+  async function openImportModal() {
+    setGroups(null);
+    setModal({ kind: 'groups' });
+    try {
+      const res = await fetch('/api/admin/waha/groups', { cache: 'no-store' });
+      const json = await res.json();
+      setGroups(json.groups ?? []);
+    } catch {
+      setGroups([]);
+    }
+  }
+
+  async function importGroup(groupId: string) {
+    if (!selectedId) return;
+    const res = await fetch(`/api/admin/events/${selectedId}/import-group`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId }),
+    });
+    const json = await res.json();
+    setModal(null);
+    if (!res.ok) {
+      setModal({
+        kind: 'info',
+        title: t('admin.modal.importTitle'),
+        message: json.error ?? t('admin.errors.addFail'),
+      });
+      return;
+    }
+    setModal({
+      kind: 'info',
+      title: t('admin.modal.importTitle'),
+      message: t('admin.modal.importResult', { n: json.imported ?? 0 }),
+    });
+    await loadDetail(selectedId);
+    await loadEvents();
   }
 
   async function logout() {
@@ -782,16 +822,24 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                         className="mt-2 w-full rounded-lg border border-burgundy-200 bg-cream px-3 py-2 text-sm"
                         placeholder={t('admin.participants.placeholder')}
                       />
-                      <button
-                        onClick={() => {
-                          const el = document.getElementById('bulkParticipants') as HTMLTextAreaElement;
-                          addParticipants(el.value);
-                          el.value = '';
-                        }}
-                        className="mt-2 rounded-full bg-forest-600 px-5 py-2 text-sm font-bold text-cream hover:bg-forest-700"
-                      >
-                        {t('admin.participants.add')}
-                      </button>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            const el = document.getElementById('bulkParticipants') as HTMLTextAreaElement;
+                            addParticipants(el.value);
+                            el.value = '';
+                          }}
+                          className="rounded-full bg-forest-600 px-5 py-2 text-sm font-bold text-cream hover:bg-forest-700"
+                        >
+                          {t('admin.participants.add')}
+                        </button>
+                        <button
+                          onClick={openImportModal}
+                          className="rounded-full border border-forest-300 px-5 py-2 text-sm font-bold text-forest-700 hover:bg-forest-50"
+                        >
+                          {t('admin.participants.importGroup')}
+                        </button>
+                      </div>
                     </>
                   )}
 
@@ -1010,6 +1058,42 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
           }
         >
           <LinkContent url={modal.url} t={t} />
+        </Modal>
+      )}
+
+      {modal?.kind === 'groups' && (
+        <Modal
+          open
+          title={t('admin.modal.importTitle')}
+          onClose={() => setModal(null)}
+          footer={
+            <button
+              onClick={() => setModal(null)}
+              className="rounded-full border border-burgundy-300 px-4 py-2 text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
+            >
+              {t('common.cancel')}
+            </button>
+          }
+        >
+          <p className="text-xs text-burgundy-900/50">{t('admin.modal.importHint')}</p>
+          {groups === null ? (
+            <p className="mt-3 text-sm text-burgundy-900/50">{t('admin.events.loading')}</p>
+          ) : groups.length === 0 ? (
+            <p className="mt-3 text-sm text-burgundy-900/50">{t('admin.modal.noGroups')}</p>
+          ) : (
+            <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+              {groups.map((g) => (
+                <li key={g.id}>
+                  <button
+                    onClick={() => importGroup(g.id)}
+                    className="w-full rounded-xl border border-burgundy-200 bg-cream px-4 py-2 text-left text-sm font-bold text-burgundy-700 hover:bg-burgundy-50"
+                  >
+                    {g.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Modal>
       )}
     </main>

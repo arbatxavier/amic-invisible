@@ -108,3 +108,66 @@ export async function sendWhatsAppText(phone: string, text: string): Promise<voi
     throw new Error(`WAHA responded ${res.status}: ${body.slice(0, 300)}`);
   }
 }
+
+export interface WahaGroup {
+  id: string;
+  name: string;
+}
+
+export async function getGroups(): Promise<WahaGroup[]> {
+  const res = await wahaRequest('/api/default/groups?exclude=participants');
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => []);
+  const list: Record<string, unknown>[] = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.data)
+      ? data.data
+      : [];
+  return list
+    .map((g) => ({
+      id: String(g.id ?? g.gid ?? ''),
+      name: String(g.name ?? g.subject ?? g.id ?? ''),
+    }))
+    .filter((g) => g.id);
+}
+
+async function resolveLidToPhone(lid: string): Promise<string> {
+  try {
+    const res = await wahaRequest(`/api/default/lids/${encodeURIComponent(lid)}`);
+    if (!res.ok) return '';
+    const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!data) return '';
+    const raw = data.pn ?? data.phone ?? data.phoneNumber ?? data.id;
+    if (typeof raw === 'string') {
+      if (raw.endsWith('@c.us')) return raw.slice(0, -5);
+      if (/^\d+$/.test(raw)) return raw;
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+export interface WahaGroupMember {
+  id: string;
+  phone: string;
+}
+
+export async function getGroupParticipants(groupId: string): Promise<WahaGroupMember[]> {
+  const res = await wahaRequest(
+    `/api/default/groups/${encodeURIComponent(groupId)}/participants/v2`,
+  );
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => []);
+  const list = Array.isArray(data) ? data : [];
+  const members: WahaGroupMember[] = [];
+  for (const p of list) {
+    const id = String((p as Record<string, unknown>).id ?? '');
+    if (!id) continue;
+    let phone = '';
+    if (id.endsWith('@c.us')) phone = id.slice(0, -5);
+    else if (id.endsWith('@lid')) phone = await resolveLidToPhone(id);
+    members.push({ id, phone });
+  }
+  return members;
+}
