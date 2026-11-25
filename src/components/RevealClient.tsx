@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { makeT, type Locale } from '@/lib/i18n';
+import { getDefaultRules } from '@/lib/template';
 
 interface RevealData {
   token: string;
@@ -25,6 +26,10 @@ function formatDate(ms: number | null): string {
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+function cleanRules(s: string): string {
+  return s.replace(/\*/g, '');
 }
 
 function fireConfetti() {
@@ -89,7 +94,9 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
           />
           <InfoRow
             label={`📜 ${t('reveal.rules')}`}
-            value={(locale === 'es' ? data.event.rulesEs : data.event.rules) || t('reveal.rulesUndefined')}
+            value={cleanRules(
+              (locale === 'es' ? data.event.rulesEs : data.event.rules) || getDefaultRules(locale),
+            )}
           />
         </div>
         <div className="card-3d mt-8 h-72 w-full">

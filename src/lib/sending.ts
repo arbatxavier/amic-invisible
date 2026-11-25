@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from './db';
 import { participants } from './db/schema';
 import { sendWhatsAppText } from './whatsapp';
-import { renderMessage } from './template';
+import { renderMessage, getDefaultRules } from './template';
 import { formatDate, getEventById, getParticipantById } from './repo';
 
 export interface SendResult {
@@ -43,7 +43,7 @@ export async function sendMessageToParticipant(
       date: formatDate(event.eventDate),
       location: event.location || '',
       budget: event.budget || '',
-      rules: (lang === 'es' ? event.rulesEs : event.rules) || '',
+      rules: (lang === 'es' ? event.rulesEs : event.rules) || getDefaultRules(lang),
       link: `${baseUrl}/r/${p.token}`,
     },
     lang,
