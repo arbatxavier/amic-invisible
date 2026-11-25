@@ -87,8 +87,9 @@ export default function RevealClient({ data, locale }: { data: RevealData; local
     }
   }, [data.token, loading, revealed, t]);
 
-  const rules =
-    (locale === 'es' ? data.event.rulesEs : data.event.rules) || getDefaultRules(locale);
+  const rules = (
+    (locale === 'es' ? data.event.rulesEs : data.event.rules) || getDefaultRules(locale)
+  ).replace(/\{nom\}/g, data.name);
 
   return (
     <main className="festive-bg flex min-h-screen flex-col items-center px-4 py-10">

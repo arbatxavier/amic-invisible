@@ -33,21 +33,23 @@ export async function sendMessageToParticipant(
   const lang = p.language === 'es' ? 'es' : 'ca';
   const template = lang === 'es' ? event.messageTemplateEs : event.messageTemplate;
 
-  const message = renderMessage(
-    template,
-    {
-      name: p.name,
-      nom: p.name,
-      friend: assigned.name,
-      title: event.title,
-      date: formatDate(event.eventDate),
-      location: event.location || '',
-      budget: event.budget || '',
-      rules: (lang === 'es' ? event.rulesEs : event.rules) || getDefaultRules(lang),
-      link: `${baseUrl}/r/${p.token}`,
-    },
-    lang,
-  );
+  const baseVars = {
+    name: p.name,
+    nom: p.name,
+    friend: assigned.name,
+    title: event.title,
+    date: formatDate(event.eventDate),
+    location: event.location || '',
+    budget: event.budget || '',
+    link: `${baseUrl}/r/${p.token}`,
+  };
+
+  const customRules = lang === 'es' ? event.rulesEs : event.rules;
+  const rules = customRules && customRules.trim()
+    ? renderMessage(customRules, baseVars, lang)
+    : getDefaultRules(lang);
+
+  const message = renderMessage(template, { ...baseVars, rules }, lang);
 
   const now = Date.now();
 

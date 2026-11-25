@@ -675,10 +675,14 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </label>
                   </div>
 
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <h3 className="mt-6 font-display text-lg font-bold text-forest-700">
+                    {t('admin.detail.rules')}
+                  </h3>
+                  <p className="text-xs text-burgundy-900/50">{t('admin.detail.templateHint')}</p>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     <label className="block">
                       <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.detail.rulesCa')}
+                        {t('admin.detail.catalan')}
                       </span>
                       <textarea
                         rows={12}
@@ -691,7 +695,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </label>
                     <label className="block">
                       <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.detail.rulesEs')}
+                        {t('admin.detail.spanish')}
                       </span>
                       <textarea
                         rows={12}
@@ -703,21 +707,15 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       />
                     </label>
                   </div>
-                  <label className="mt-3 flex items-center gap-2 text-sm font-bold text-burgundy-700">
-                    <input
-                      type="checkbox"
-                      defaultChecked={detail.event.avoidTwoCycles}
-                      disabled={readOnly}
-                      onChange={(e) => updateEventField('avoidTwoCycles', e.target.checked)}
-                      className="h-4 w-4 accent-burgundy-600"
-                    />
-                    {t('admin.detail.avoidTwoCycles')}
-                  </label>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <h3 className="mt-6 font-display text-lg font-bold text-forest-700">
+                    {t('admin.detail.templates')}
+                  </h3>
+                  <p className="text-xs text-burgundy-900/50">{t('admin.detail.templateHint')}</p>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     <label className="block">
                       <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.detail.templateCa')}
+                        {t('admin.detail.catalan')}
                       </span>
                       <textarea
                         rows={6}
@@ -730,7 +728,7 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                     </label>
                     <label className="block">
                       <span className="text-xs font-bold text-burgundy-700">
-                        {t('admin.detail.templateEs')}
+                        {t('admin.detail.spanish')}
                       </span>
                       <textarea
                         rows={6}
@@ -742,7 +740,16 @@ export default function AdminPanel({ locale }: { locale: Locale }) {
                       />
                     </label>
                   </div>
-
+<label className="mt-3 flex items-center gap-2 text-sm font-bold text-burgundy-700">
+                    <input
+                      type="checkbox"
+                      defaultChecked={detail.event.avoidTwoCycles}
+                      disabled={readOnly}
+                      onChange={(e) => updateEventField('avoidTwoCycles', e.target.checked)}
+                      className="h-4 w-4 accent-burgundy-600"
+                    />
+                    {t('admin.detail.avoidTwoCycles')}
+                  </label>
                   {!readOnly && (
                     <>
                       <button
