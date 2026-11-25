@@ -12,7 +12,7 @@ services:
       WAHA_URL: http://waha:3000
       WAHA_API_KEY: ${WAHA_API_KEY:-}
     volumes:
-      - ./data:/app/data
+      - data:/app/data
     depends_on:
       - waha
 
@@ -28,4 +28,8 @@ services:
       # GOWS engine (WebSocket, no browser) - more reliable than WEBJS
       WHATSAPP_DEFAULT_ENGINE: GOWS
     volumes:
-      - ./waha-data:/app/.sessions
+      - waha-data:/app/.sessions
+
+volumes:
+  data:
+  waha-data:
